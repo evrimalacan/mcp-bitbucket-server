@@ -223,5 +223,5 @@ See [LICENSE](LICENSE) file for details.
 
 ## Resources
 
-- [Bitbucket Server REST API Documentation](https://docs.atlassian.com/bitbucket-server/rest/)
+- [Bitbucket Server REST API Documentation](https://developer.atlassian.com/server/bitbucket/rest/v1000/intro/)
 - [Model Context Protocol](https://modelcontextprotocol.io)
