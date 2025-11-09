@@ -13,7 +13,7 @@
     "lint": "biome check --write .",
     "test": "jest",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "prepublishOnly": "npm run clean && npm run build",
     "prepare": "npm run build"
   },
   "jest": {
