@@ -1,0 +1,492 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+This is an MCP (Model Context Protocol) server for Bitbucket Server/Data Center integration. The server provides tools for:
+- **User management**: Get user profile, list all users
+- **Repository operations**: List repositories in a project
+- **Pull request operations**: Get changed files, get structured diffs, add comments (general, replies, and inline)
+
+## Architecture
+
+This is a **simple, straightforward implementation** with minimal abstraction:
+
+```
+Tool → bitbucketClient (axios) → Bitbucket Server REST API
+```
+
+**Key principles:**
+- Direct axios client usage (no wrapper classes)
+- Minimal error handling (let errors bubble up)
+- Simple, readable code
+- Verify all endpoints against Swagger documentation
+
+## Bitbucket Server API Documentation
+
+### Always Verify with Swagger
+
+**CRITICAL**: The Bitbucket Server Swagger documentation is located at `BitbucketServerSwagger.json` in the project root. Always verify endpoint capabilities and parameters against this file before implementing tools.
+
+The Swagger file is **67,521 lines** - use grep to find specific endpoints:
+
+```bash
+# Find an endpoint
+grep -n '"/api/latest/users"' BitbucketServerSwagger.json
+
+# Read endpoint details
+# Use the line number from grep, then read ~80 lines
+```
+
+### API Base URL
+
+All endpoints use: `${BITBUCKET_URL}/rest/api/latest`
+
+Example: `https://your-bitbucket-server.com/rest/api/latest/users`
+
+### Authentication
+
+Uses **Bearer token** authentication:
+
+```typescript
+headers: {
+  Authorization: `Bearer ${token}`
+}
+```
+
+The token is a Bitbucket Personal Access Token configured in `.env`.
+
+## Project Structure
+
+```
+src/
+├── config.ts                    # Environment validation (BITBUCKET_URL, BITBUCKET_TOKEN)
+├── index.ts                     # Main entry point, MCP server setup
+├── services/
+│   └── bitbucket.ts            # Axios client instance (export const bitbucketClient)
+└── tools/
+    ├── index.ts                # Tool registration
+    ├── users/
+    │   ├── index.ts            # Barrel export
+    │   ├── get_user_profile.ts # GET /users/{username}
+    │   └── get_all_users.ts    # GET /users
+    ├── projects/
+    │   ├── index.ts            # Barrel export
+    │   └── list_projects.ts    # GET /projects
+    ├── repositories/
+    │   ├── index.ts            # Barrel export
+    │   └── list_repositories.ts # GET /projects/{projectKey}/repos
+    └── pull-requests/
+        ├── index.ts                    # Barrel export
+        ├── get_inbox_pull_requests.ts  # GET /inbox/pull-requests
+        ├── add_pr_comment.ts           # POST /projects/.../pull-requests/.../comments
+        ├── get_pr_changes.ts           # GET /projects/.../pull-requests/.../changes
+        ├── get_pr_file_diff.ts         # GET /projects/.../pull-requests/.../diff/{path}
+        └── get_pr_activities.ts        # GET /projects/.../pull-requests/.../activities
+```
+
+## Tool Development Workflow
+
+### 1. Find the Endpoint in Swagger
+
+```bash
+# Search for the endpoint
+grep -n '"/api/latest/your-endpoint"' BitbucketServerSwagger.json
+
+# Read the specification
+# Note the line number, then read from that line
+```
+
+### 2. Verify Parameters
+
+**Check what parameters are actually supported:**
+- Path parameters (required in the URL)
+- Query parameters (optional filters, pagination)
+- Request body (for POST/PUT)
+
+**Don't assume parameters exist** - the Swagger spec is the source of truth.
+
+### 3. Implement the Tool
+
+Follow this simple pattern:
+
+```typescript
+import { z } from "zod";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { bitbucketClient } from "../../services/bitbucket.js";
+
+const schema = z.object({
+  requiredParam: z.string().describe("Description from Swagger"),
+  optionalParam: z.string().optional().describe("Optional parameter"),
+});
+
+export const toolNameTool = (server: McpServer) => {
+  server.registerTool(
+    "bitbucket_tool_name",
+    {
+      title: "Human Readable Title",
+      description: "Description from Swagger documentation",
+      inputSchema: schema.shape,
+    },
+    async (params) => {
+      const { requiredParam, optionalParam } = schema.parse(params);
+
+      const response = await bitbucketClient.get("/endpoint", {
+        params: optionalParam ? { optionalParam } : {},
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(response.data, null, 2),
+          },
+        ],
+      };
+    }
+  );
+};
+```
+
+### 4. Register the Tool
+
+```typescript
+// 1. Export from domain barrel file (e.g., src/tools/users/index.ts)
+export * from "./tool_name.js";
+
+// 2. Import and register in src/tools/index.ts
+import { toolNameTool } from "./domain/index.js";
+
+export function registerTools(server: McpServer) {
+  // ... existing tools
+  toolNameTool(server);
+}
+```
+
+## Code Style Guidelines
+
+### Keep It Simple
+
+**✅ DO:**
+- Use direct axios calls: `bitbucketClient.get(...)`
+- Minimal error handling (only when necessary)
+- Short, focused functions
+- Clear parameter names
+
+**❌ DON'T:**
+- Add wrapper classes
+- Over-engineer error handling
+- Add unnecessary abstractions
+- Use try-catch unless required
+
+### Example: Simple Tool
+
+```typescript
+// ✅ Good - simple and direct
+export const getAllUsersTool = (server: McpServer) => {
+  server.registerTool("bitbucket_get_all_users", { ... }, async (params) => {
+    const { filter } = schema.parse(params);
+
+    const response = await bitbucketClient.get("/users", {
+      params: filter ? { filter } : {},
+    });
+
+    return {
+      content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }],
+    };
+  });
+};
+```
+
+```typescript
+// ❌ Bad - over-engineered
+export const getAllUsersTool = (server: McpServer) => {
+  server.registerTool("bitbucket_get_all_users", { ... }, async (params) => {
+    try {
+      const { filter } = schema.parse(params);
+
+      const queryParams = buildQueryParams({ filter }); // Unnecessary
+      const client = getClient(); // Unnecessary wrapper
+      const response = await client.get("/users", queryParams);
+
+      return handleResponse(response); // Over-abstracted
+    } catch (error) {
+      return handleError(error); // Let errors bubble
+    }
+  });
+};
+```
+
+## Current Tools
+
+### bitbucket_get_user_profile
+**File**: `src/tools/users/get_user_profile.ts`
+**Endpoint**: `GET /users/{username}`
+**Parameters**:
+- `username` (required): The username/slug of the Bitbucket Server user
+
+### bitbucket_get_all_users
+**File**: `src/tools/users/get_all_users.ts`
+**Endpoint**: `GET /users`
+**Parameters**:
+- `filter` (optional): Filter users by username, name or email (partial match)
+
+### bitbucket_list_projects
+**File**: `src/tools/projects/list_projects.ts`
+**Endpoint**: `GET /projects`
+**Parameters**:
+- `name` (optional): Filter projects by name (partial match)
+- `permission` (optional): Filter by permission (e.g., PROJECT_READ, PROJECT_WRITE, PROJECT_ADMIN)
+- `start` (optional): Starting index for pagination (default: 0)
+- `limit` (optional): Maximum number of projects to return (default: 25)
+
+**Returns**: Paginated list of projects with project keys, names, descriptions, and permission levels.
+
+**Purpose**: Discover available projects that the authenticated user has access to. Use the project key from this response to list repositories in specific projects.
+
+### bitbucket_list_repositories
+**File**: `src/tools/repositories/list_repositories.ts`
+**Endpoint**: `GET /projects/{projectKey}/repos`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+
+**Note**: According to Swagger, this endpoint does NOT support `name` or `permission` query parameters. Only pagination (`start`, `limit`) is supported.
+
+### bitbucket_get_inbox_pull_requests
+**File**: `src/tools/pull-requests/get_inbox_pull_requests.ts`
+**Endpoint**: `GET /inbox/pull-requests`
+**Parameters**:
+- `start` (optional): Starting index for pagination (default: 0)
+- `limit` (optional): Maximum number of PRs to return (default: 25)
+
+**Returns**: Paginated list of pull requests where the authenticated user is assigned as a reviewer. Each PR includes ONLY essential review information:
+- `id` - Pull request ID
+- `title` - PR title
+- `description` - PR description
+- `state` - PR state (OPEN/MERGED/DECLINED)
+- `author` - Author display name (string)
+- `projectKey` - Project key for review tools
+- `repositorySlug` - Repository slug for review tools
+- `createdDate` - Creation timestamp
+- `updatedDate` - Last update timestamp
+
+**Token Optimization**: Response is heavily optimized to reduce token usage by ~92% (100KB → 7.7KB for 25 PRs):
+- Strips all nested objects (reviewers, branches, repository details, project details)
+- Removes all user objects except author display name
+- Flattens `projectKey` and `repositorySlug` to top level
+- Removes all metadata not needed for review
+
+**Purpose**: Discover all PRs across all projects and repositories that need your review in one call. Much more efficient than querying project by project. Use the `id`, `projectKey`, and `repositorySlug` from the response to review specific PRs with other tools.
+
+### bitbucket_add_pr_comment
+**File**: `src/tools/pull-requests/add_pr_comment.ts`
+**Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `text` (required): The comment text
+- `parentId` (optional): Parent comment ID for replies
+- `path` (optional): File path for file-specific comments
+- `line` (optional): Line number for inline comments
+- `lineType` (optional): "ADDED", "REMOVED", or "CONTEXT" (default: CONTEXT)
+- `fileType` (optional): "FROM" or "TO" (default: TO)
+
+**Note**: This single tool handles general comments, replies, and inline file/line comments through optional parameters.
+
+### bitbucket_get_pull_request_changes
+**File**: `src/tools/pull-requests/get_pr_changes.ts`
+**Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/changes`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `limit` (optional): Number of items to return (default: 25, note: endpoint is not paged)
+
+**Returns**: List of changed files with metadata (file paths, change types like ADD/MODIFY/DELETE, content IDs, comment counts)
+
+**Purpose**: Get an overview of all files changed in a PR. Use this as the first step before fetching detailed diffs. Always returns all changes with comment counts included.
+
+### bitbucket_get_pull_request_file_diff
+**File**: `src/tools/pull-requests/get_pr_file_diff.ts`
+**Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/diff/{path}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `path` (required): File path to diff (e.g., "src/main.ts")
+- `contextLines` (optional): Lines of context around changes (default: 10)
+
+**Returns**: Structured JSON with hunks, segments, and exact line numbers for each change. Each line includes `source` (FROM line number) and `destination` (TO line number) fields. Existing comments are embedded in the diff. Whitespace changes are always included.
+
+**Purpose**: Get line-by-line diff data for commenting on specific lines. Use the line numbers from this response when calling `bitbucket_add_pr_comment`.
+
+### bitbucket_get_pull_request_activities
+**File**: `src/tools/pull-requests/get_pr_activities.ts`
+**Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/activities`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `activityTypes` (optional): Filter by activity types - array of strings
+- `start` (optional): Starting index for pagination (default: 0)
+- `limit` (optional): Maximum items to return (default: 25)
+
+**Returns**: Paginated list of activity items with:
+- `action`: Activity type (COMMENTED, APPROVED, DECLINED, MERGED, REVIEWED, UPDATED, RESCOPED, etc.)
+- `id`: Activity ID
+- `createdDate`: Timestamp
+- `user`: Who performed the action
+- Additional fields based on action type
+
+**Activity Action Types** (from Bitbucket Server Swagger):
+- `COMMENTED` - General or inline comment added
+- `REVIEW_COMMENTED` - Review comment added
+- `APPROVED` / `UNAPPROVED` - Approval status changed
+- `REVIEWED` / `REVIEW_FINISHED` / `REVIEW_DISCARDED` - Review actions
+- `MERGED` - PR was merged
+- `OPENED` / `REOPENED` / `DECLINED` - PR status changes
+- `UPDATED` / `RESCOPED` - PR updated (commits added/removed)
+- `DELETED` - Activity was deleted
+- `AUTO_MERGE_REQUESTED` / `AUTO_MERGE_CANCELLED` - Auto-merge actions
+
+**Filtering Examples**:
+- Get only comments: `activityTypes: ["COMMENTED", "REVIEW_COMMENTED"]`
+- Get approvals/reviews: `activityTypes: ["APPROVED", "UNAPPROVED", "REVIEWED"]`
+- Get all activity: Omit `activityTypes` parameter
+
+**Token Optimization**: Response is automatically optimized to reduce token usage by ~50%:
+- Removes `diff` field (use `commentAnchor.path` with `bitbucket_get_pull_request_file_diff` to fetch code context on demand)
+- Removes `user.links` from all user objects
+- Removes `comment.permittedOperations`
+- Simplifies `reactions` and `likedBy` to counts only
+
+**Purpose**: Get an overview of PR activity. Can filter to specific types (e.g., only comments) to reduce response size. Each comment activity includes full comment text, author, and creation date. For inline comments, use `commentAnchor` (path, line, lineType, fileType) to fetch the relevant diff separately.
+
+## Pull Request Review Workflow
+
+For agents reviewing PRs and leaving comments on specific lines:
+
+0. **Discover PRs to review**:
+   ```
+   bitbucket_get_inbox_pull_requests()
+   → Returns PRs across all projects: [{id, title, description, state, author, projectKey, repositorySlug, ...}, ...]
+   ```
+   Use `id`, `projectKey`, and `repositorySlug` from each PR for the following steps.
+
+1. **[Optional] Get activity overview or comments**:
+   ```
+   # Get all activity
+   bitbucket_get_pull_request_activities(projectKey, repositorySlug, pullRequestId)
+
+   # Or get only comments (smaller response)
+   bitbucket_get_pull_request_activities(projectKey, repositorySlug, pullRequestId,
+     activityTypes=["COMMENTED", "REVIEW_COMMENTED"])
+   → Returns filtered activities: [{action: "COMMENTED", comment: {text, author, ...}, ...}, ...]
+   ```
+   Use this to see existing discussions before reviewing.
+
+2. **Get all changed files**:
+   ```
+   bitbucket_get_pull_request_changes(projectKey, repositorySlug, pullRequestId)
+   → Returns list of files: [{path, type: "MODIFY", ...}, ...]
+   ```
+
+3. **For each file of interest, get structured diff**:
+   ```
+   bitbucket_get_pull_request_file_diff(projectKey, repositorySlug, pullRequestId, path="src/main.ts")
+   → Returns: {hunks: [{segments: [{type: "ADDED", lines: [{source: 42, destination: 43, line: "code"}]}]}]}
+   ```
+
+4. **Comment on specific lines**:
+   ```
+   bitbucket_add_pr_comment(
+     projectKey, repositorySlug, pullRequestId,
+     text="Consider using const here",
+     path="src/main.ts",
+     line=43,              // Use destination line number from diff
+     lineType="ADDED",     // Use segment type from diff
+     fileType="TO"         // "TO" for destination side
+   )
+   ```
+
+**Key Points**:
+- Use `destination` line numbers from the diff for the `TO` side (most common)
+- Use `source` line numbers for the `FROM` side
+- Match `lineType` to the segment type from the diff (ADDED/REMOVED/CONTEXT)
+- The structured diff ensures exact line number accuracy
+
+## Development Commands
+
+```bash
+# Development with hot reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Run the server
+node dist/index.js
+
+# Type checking
+npx tsc --noEmit
+```
+
+## Environment Setup
+
+Required environment variables in `.env`:
+
+```bash
+# Bitbucket Server URL
+BITBUCKET_URL=https://your-bitbucket-server.com
+
+# Personal Access Token
+BITBUCKET_TOKEN=your_token_here
+```
+
+See `.env.example` for template.
+
+## Common Patterns
+
+### Pagination
+
+Many endpoints support pagination:
+
+```typescript
+const response = await bitbucketClient.get("/endpoint", {
+  params: {
+    start: 0,
+    limit: 25,
+  },
+});
+```
+
+Response includes:
+- `values`: Array of results
+- `size`: Number of results in this page
+- `limit`: Page size
+- `isLastPage`: Boolean
+- `nextPageStart`: Start value for next page
+
+### Error Responses
+
+Bitbucket Server returns errors in this format:
+
+```json
+{
+  "errors": [
+    {
+      "context": "field_name",
+      "message": "Error description",
+      "exceptionName": "ExceptionType"
+    }
+  ]
+}
+```
+
+## Resources
+
+- **Swagger Documentation**: `BitbucketServerSwagger.json` in project root
+- **Bitbucket Server REST API**: `${BITBUCKET_URL}/rest/api/latest/`
+- **OpenAPI Spec**: Available via Bitbucket Server UI (triple dot menu)

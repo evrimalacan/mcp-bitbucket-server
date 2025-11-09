@@ -1,0 +1,21 @@
+# Source files
+src/
+tsconfig.json
+
+# Development files
+.env
+.env.example
+.claude/
+.DS_Store
+
+# Test files
+src/__tests__/
+
+# Development dependencies
+node_modules/
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+*.log
