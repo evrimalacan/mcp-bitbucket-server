@@ -1,227 +1,161 @@
-# MCP Bitbucket Server
+# Bitbucket Server MCP
 
-An MCP (Model Context Protocol) server for Bitbucket Server/Data Center integration.
+A **Model Context Protocol (MCP)** server that connects AI assistants to Bitbucket Server/Data Center. Review pull requests, manage repositories, search users, and interact with your Bitbucket instance through natural language in Claude and other AI assistants.
 
-## Features
+## 🚀 Quick Start
 
-This MCP server provides tools for:
+### Get Your Bitbucket Server Credentials
 
-- **User Management**: Get user profiles, list all users with filtering
-- **Repository Operations**: List repositories in projects
-- **Pull Request Operations**: Add comments to pull requests (general, replies, and inline)
-
-## Installation
-
-```bash
-npm install
-npm run build
-```
-
-## Configuration
-
-Create a `.env` file with your Bitbucket Server credentials:
-
-```bash
-# Bitbucket Server URL
-BITBUCKET_URL=https://your-bitbucket-server.com
-
-# Personal Access Token
-BITBUCKET_TOKEN=your_personal_access_token
-```
-
-See `.env.example` for a template.
-
-### Generating a Personal Access Token
-
-1. Log in to your Bitbucket Server instance
+1. Log into your Bitbucket Server instance
 2. Go to **Profile** → **Manage account** → **Personal access tokens**
 3. Click **Create a token**
 4. Give it a name and select appropriate permissions:
-   - **Project permissions**: Read
-   - **Repository permissions**: Read
-5. Copy the generated token to your `.env` file
+   - **Project permissions**: Read (or Write for commenting)
+   - **Repository permissions**: Read (or Write for commenting)
+5. Copy the generated token
+6. Note your Bitbucket Server URL (e.g., `https://bitbucket.yourcompany.com`)
 
-## Usage
+### Configuration
 
-### Development Mode
+#### Claude Code
+
+Add the server using the Claude Code CLI:
 
 ```bash
+claude mcp add -s user \
+    bitbucket-server \
+    npx mcp-bitbucket-server@latest \
+    -e "BITBUCKET_URL=https://bitbucket.yourcompany.com" \
+    -e "BITBUCKET_TOKEN=your_personal_access_token"
+```
+
+#### Manual Configuration (Any MCP Client)
+
+Alternatively, add this configuration to your MCP client's configuration file:
+
+```json
+{
+  "mcpServers": {
+    "bitbucket-server": {
+      "command": "npx",
+      "args": ["mcp-bitbucket-server@latest"],
+      "type": "stdio",
+      "env": {
+        "BITBUCKET_URL": "https://bitbucket.yourcompany.com",
+        "BITBUCKET_TOKEN": "your_personal_access_token"
+      }
+    }
+  }
+}
+```
+
+## ✨ Features
+
+- 👥 **User Management** - Search users and get profiles
+- 📁 **Project & Repository Discovery** - List projects and repositories
+- 🔍 **Pull Request Review** - Get PR details, changes, diffs, and activities
+- 💬 **Smart Comments** - Add general, reply, and inline comments on PRs
+- 📊 **PR Inbox** - See all PRs where you're a reviewer across all projects
+- 🎯 **Token Optimized** - Responses optimized to reduce token usage
+- 🔒 **Secure Authentication** - Uses Personal Access Tokens
+- 🛡️ **Simple & Direct** - Minimal abstractions, direct API access
+
+## 🛠️ Available Tools
+
+The server provides **11 MCP tools** for Bitbucket Server operations:
+
+### User Management
+- `bitbucket_get_user_profile` - Get detailed user information
+- `bitbucket_get_all_users` - List and search all users
+
+### Projects & Repositories
+- `bitbucket_list_projects` - Discover available projects
+- `bitbucket_list_repositories` - List repositories in a project
+
+### Pull Request Operations
+- `bitbucket_get_inbox_pull_requests` - Get all PRs needing your review
+- `bitbucket_get_pull_request_changes` - List all changed files in a PR
+- `bitbucket_get_pull_request_file_diff` - Get structured line-by-line diff
+- `bitbucket_get_pull_request_activities` - Get PR comments, approvals, and activity
+- `bitbucket_add_pr_comment` - Add general, reply, or inline comments
+
+## 💡 Example Queries
+
+- *"Show me all pull requests I need to review"*
+- *"Get the changes in pull request #123 in the PROJ repository"*
+- *"Show me the diff for src/main.ts in PR #456"*
+- *"Add a comment on line 42 of src/app.ts suggesting we use const instead"*
+- *"List all repositories in the DEV project"*
+- *"Find users named John"*
+- *"What are the recent activities on PR #789?"*
+
+## 🏗️ Development
+
+### From Source
+
+```bash
+# Clone and setup
+git clone https://github.com/evrimalacan/mcp-bitbucket-server.git
+cd mcp-bitbucket-server
+npm install
+
+# Build
+npm run build
+
+# Development mode
 npm run dev
 ```
-
-### Production
-
-```bash
-npm run build
-node dist/index.js
-```
-
-### Testing with MCP Inspector
-
-```bash
-npx @modelcontextprotocol/inspector node dist/index.js
-```
-
-## Available Tools
-
-### User Tools
-
-#### bitbucket_get_user_profile
-Get detailed information about a specific Bitbucket user.
-
-**Parameters:**
-- `username` (required): The username/slug of the Bitbucket Server user
-
-**Example:**
-```json
-{
-  "username": "john.doe"
-}
-```
-
-#### bitbucket_get_all_users
-Retrieve a list of all Bitbucket users with optional filtering.
-
-**Parameters:**
-- `filter` (optional): Filter users by username, name or email address (partial match)
-
-**Examples:**
-```json
-// Get all users
-{}
-
-// Search for users matching "john"
-{
-  "filter": "john"
-}
-```
-
-### Repository Tools
-
-#### bitbucket_list_repositories
-List all repositories in a Bitbucket Server project.
-
-**Parameters:**
-- `projectKey` (required): The Bitbucket Server project key (e.g., "PROJ", "DEV")
-
-**Example:**
-```json
-{
-  "projectKey": "PROJ"
-}
-```
-
-### Pull Request Tools
-
-#### bitbucket_add_pr_comment
-Add a comment to a pull request. Supports general comments, replies, and inline file/line comments.
-
-**Parameters:**
-- `projectKey` (required): The Bitbucket Server project key
-- `repositorySlug` (required): The repository slug
-- `pullRequestId` (required): The pull request ID
-- `text` (required): The comment text
-- `parentId` (optional): Parent comment ID for replies
-- `path` (optional): File path for file-specific comments
-- `line` (optional): Line number for inline comments
-- `lineType` (optional): "ADDED", "REMOVED", or "CONTEXT"
-- `fileType` (optional): "FROM" or "TO"
-
-**Examples:**
-```json
-// General comment
-{
-  "projectKey": "PROJ",
-  "repositorySlug": "my-repo",
-  "pullRequestId": 123,
-  "text": "Looks good to me!"
-}
-
-// Reply to a comment
-{
-  "projectKey": "PROJ",
-  "repositorySlug": "my-repo",
-  "pullRequestId": 123,
-  "text": "I agree",
-  "parentId": 456
-}
-
-// Inline comment on a specific line
-{
-  "projectKey": "PROJ",
-  "repositorySlug": "my-repo",
-  "pullRequestId": 123,
-  "text": "This variable name could be clearer",
-  "path": "src/app.ts",
-  "line": 42,
-  "lineType": "ADDED"
-}
-```
-
-## Project Structure
-
-```
-src/
-├── config.ts                    # Environment variables with validation
-├── index.ts                     # Main entry point, MCP server setup
-├── services/
-│   └── bitbucket.ts            # Bitbucket API client (axios instance)
-└── tools/
-    ├── index.ts                # Tool registration
-    ├── users/                  # User management tools
-    │   ├── get_user_profile.ts
-    │   └── get_all_users.ts
-    ├── repositories/           # Repository operations tools
-    │   └── list_repositories.ts
-    └── pull-requests/          # Pull request tools
-        └── add_pr_comment.ts
-```
-
-## Development
 
 ### Adding New Tools
 
 1. Check the Bitbucket Server Swagger documentation (`BitbucketServerSwagger.json`)
-2. Create a new tool file in the appropriate domain folder
+2. Create a new tool file in the appropriate domain folder under `src/tools/`
 3. Export it from the domain's `index.ts`
 4. Register it in `src/tools/index.ts`
 
 See `CLAUDE.md` for detailed development guidelines.
 
-### Development Commands
+## 🐛 Troubleshooting
 
-```bash
-# Development with hot reload
-npm run dev
+### Common Issues
 
-# Build for production
-npm run build
+**"Authentication failed"**
+- Verify your Personal Access Token is correct
+- Ensure the token has appropriate permissions
 
-# Type checking
-npx tsc --noEmit
+**"Access forbidden"**
+- Check your Bitbucket user has permission for the resource
+- Verify token permissions include required scopes
 
-# Linting
-npm run lint
-```
+**"Resource not found"**
+- Confirm the project key, repository slug, or PR ID is correct
+- Check you have access to the specified resource
 
-## Architecture
+## 📚 Documentation
 
-This is a simple, straightforward MCP server implementation:
+- **[Development Guide](CLAUDE.md)** - Detailed development and contribution guide
+- **[Bitbucket Server REST API](https://developer.atlassian.com/server/bitbucket/rest/v1000/intro/)** - Official API reference
+- **[Model Context Protocol](https://modelcontextprotocol.io)** - MCP specification
 
-- **Authentication**: Bearer token (Personal Access Token)
-- **HTTP Client**: Axios with direct usage (no wrapper classes)
-- **API Version**: `/rest/api/latest`
-- **Error Handling**: Minimal - let errors bubble up naturally
+## 🤝 Contributing
 
-## API Documentation
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Follow the development guide in `CLAUDE.md`
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
-The Bitbucket Server REST API Swagger specification is included in the repository at `BitbucketServerSwagger.json`. This is the source of truth for all endpoint capabilities and parameters.
+## 📄 License
 
-## License
+MIT License - see [LICENSE](LICENSE) file for details.
 
-See [LICENSE](LICENSE) file for details.
+## 🌟 Support
 
-## Resources
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/evrimalacan/mcp-bitbucket-server/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/evrimalacan/mcp-bitbucket-server/discussions)
+- 📖 **Documentation**: See [CLAUDE.md](CLAUDE.md) for comprehensive guide
 
-- [Bitbucket Server REST API Documentation](https://developer.atlassian.com/server/bitbucket/rest/v1000/intro/)
-- [Model Context Protocol](https://modelcontextprotocol.io)
+---
+
+**Built for developers who want AI assistance with Bitbucket Server**
