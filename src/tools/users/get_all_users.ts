@@ -14,9 +14,7 @@ export const getAllUsersTool = (server: McpServer) => {
       description: 'Retrieve a page of users from Bitbucket Server, optionally filtered by search term',
       inputSchema: schema.shape,
     },
-    async (params) => {
-      const { filter } = schema.parse(params);
-
+    async ({ filter }) => {
       const response = await bitbucketClient.get('/users', {
         params: filter ? { filter } : {},
       });

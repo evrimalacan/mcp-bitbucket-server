@@ -22,10 +22,7 @@ export const addPrCommentTool = (server: McpServer) => {
       description: 'Add a comment to a pull request. Supports general comments, replies, and inline file/line comments',
       inputSchema: schema.shape,
     },
-    async (params) => {
-      const { projectKey, repositorySlug, pullRequestId, text, parentId, path, line, lineType, fileType } =
-        schema.parse(params);
-
+    async ({ projectKey, repositorySlug, pullRequestId, text, parentId, path, line, lineType, fileType }) => {
       const body: any = { text };
 
       if (parentId) {

@@ -16,13 +16,7 @@ export const getUserProfileTool = (server: McpServer) => {
       description: 'Gets Bitbucket Server user profile details by username',
       inputSchema: schema.shape,
     },
-    async (params) => {
-      const { username } = schema.parse(params);
-
-      if (!username) {
-        throw new McpError(ErrorCode.InvalidParams, 'Username is required');
-      }
-
+    async ({ username }) => {
       try {
         const response = await bitbucketClient.get(`/users/${username}`);
 

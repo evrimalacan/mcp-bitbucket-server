@@ -1,6 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { addPrCommentTool, getPrChangesTool, getPrFileDiffTool, getPrActivitiesTool, getInboxPullRequestsTool } from './pull-requests/index.js';
 import { listProjectsTool } from './projects/index.js';
+import {
+  addPrCommentTool,
+  getInboxPullRequestsTool,
+  getPrActivitiesTool,
+  getPrChangesTool,
+  getPrFileDiffTool,
+} from './pull-requests/index.js';
 import { listRepositoriesTool } from './repositories/index.js';
 import { getAllUsersTool, getUserProfileTool } from './users/index.js';
 

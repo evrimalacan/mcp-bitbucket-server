@@ -3,6 +3,7 @@ import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import axios from 'axios';
 import { z } from 'zod';
 import { bitbucketClient } from '../../services/bitbucket.js';
+import type { RepositoriesResponse } from '../../types/index.js';
 
 const schema = z.object({
   projectKey: z.string().describe('The Bitbucket Server project key'),
@@ -16,15 +17,9 @@ export const listRepositoriesTool = (server: McpServer) => {
       description: 'List all repositories in a Bitbucket Server project',
       inputSchema: schema.shape,
     },
-    async (params) => {
-      const { projectKey } = schema.parse(params);
-
-      if (!projectKey) {
-        throw new McpError(ErrorCode.InvalidParams, 'Project key is required');
-      }
-
+    async ({ projectKey }) => {
       try {
-        const response = await bitbucketClient.get(`/projects/${projectKey}/repos`);
+        const response = await bitbucketClient.get<RepositoriesResponse>(`/projects/${projectKey}/repos`);
 
         return {
           content: [

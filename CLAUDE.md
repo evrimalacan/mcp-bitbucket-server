@@ -65,6 +65,10 @@ src/
 ├── index.ts                     # Main entry point, MCP server setup
 ├── services/
 │   └── bitbucket.ts            # Axios client instance (export const bitbucketClient)
+├── types/
+│   ├── index.ts                # Barrel export for all types
+│   ├── common.ts               # Shared types (PaginatedResponse)
+│   └── repository.ts           # Repository-specific types
 └── tools/
     ├── index.ts                # Tool registration
     ├── users/
@@ -85,6 +89,72 @@ src/
         ├── get_pr_file_diff.ts         # GET /projects/.../pull-requests/.../diff/{path}
         └── get_pr_activities.ts        # GET /projects/.../pull-requests/.../activities
 ```
+
+## TypeScript Types
+
+TypeScript type definitions for Bitbucket Server API responses are located in `src/types/`:
+
+```
+src/types/
+├── index.ts         # Barrel export (import from here)
+├── common.ts        # Shared types (PaginatedResponse)
+└── repository.ts    # Repository-specific types
+```
+
+### Type Naming Conventions
+
+- **Match Swagger schema names exactly**: `RestRepository`, `RestProject`, `RestPullRequest`
+- **Use interfaces for objects**: `interface RestRepository { ... }`
+- **Use union types for enums**: `type RepositoryState = "AVAILABLE" | "OFFLINE"`
+- **Generic wrapper types**: `PaginatedResponse<T>` for paginated endpoints
+- **Response type aliases**: `RepositoriesResponse = PaginatedResponse<RestRepository>`
+
+### Adding New Types
+
+1. **Find the schema in Swagger**:
+   ```bash
+   grep -n '"RestTypeName"' BitbucketServerSwagger.json
+   ```
+
+2. **Create/update type file** (e.g., `src/types/domain.ts`):
+   ```typescript
+   // Focus on readonly properties (what API returns)
+   export interface RestTypeName {
+     id: number;
+     name: string;
+     // ... other fields
+   }
+
+   export type DomainResponse = PaginatedResponse<RestTypeName>;
+   ```
+
+3. **Export from barrel file** (`src/types/index.ts`):
+   ```typescript
+   export type { RestTypeName, DomainResponse } from "./domain.js";
+   ```
+
+4. **Use in tool**:
+   ```typescript
+   import type { DomainResponse } from "../../types/index.js";
+
+   const response = await bitbucketClient.get<DomainResponse>("/endpoint");
+   ```
+
+### Type Design Principles
+
+Following the project's simplicity philosophy:
+
+**✅ DO:**
+- Map types directly from Swagger schemas
+- Focus on readonly properties (API responses)
+- Keep types simple and minimal
+- Use generic `PaginatedResponse<T>` for all paginated endpoints
+
+**❌ DON'T:**
+- Over-engineer with complex utility types
+- Include writeOnly properties (used for requests)
+- Add properties that aren't useful
+- Create unnecessary type abstractions
 
 ## Tool Development Workflow
 
@@ -115,6 +185,7 @@ Follow this simple pattern:
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { bitbucketClient } from "../../services/bitbucket.js";
+import type { YourResponseType } from "../../types/index.js";
 
 const schema = z.object({
   requiredParam: z.string().describe("Description from Swagger"),
@@ -132,7 +203,7 @@ export const toolNameTool = (server: McpServer) => {
     async (params) => {
       const { requiredParam, optionalParam } = schema.parse(params);
 
-      const response = await bitbucketClient.get("/endpoint", {
+      const response = await bitbucketClient.get<YourResponseType>("/endpoint", {
         params: optionalParam ? { optionalParam } : {},
       });
 
@@ -163,6 +234,16 @@ export function registerTools(server: McpServer) {
   toolNameTool(server);
 }
 ```
+
+### 5. Run the Linter
+
+Always run the linter after implementing a new tool:
+
+```bash
+npm run lint
+```
+
+The linter will auto-fix formatting, catch unused variables, and ensure code quality. Fix any warnings before committing.
 
 ## Code Style Guidelines
 
@@ -431,7 +512,12 @@ node dist/index.js
 
 # Type checking
 npx tsc --noEmit
+
+# Lint and auto-fix issues
+npm run lint
 ```
+
+**IMPORTANT**: Always run `npm run lint` after making code changes. The linter will auto-fix formatting issues and catch unused variables, type errors, and other code quality issues.
 
 ## Environment Setup
 
