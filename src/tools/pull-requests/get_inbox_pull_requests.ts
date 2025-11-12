@@ -1,6 +1,12 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { bitbucketClient } from '../../services/bitbucket.js';
+import type {
+  InboxPullRequest,
+  InboxPullRequestsResponse,
+  MinimalPullRequest,
+  PaginatedResponse,
+} from '../../types/index.js';
 
 const schema = z.object({
   start: z.number().optional().describe('Starting index for pagination (default: 0)'),
@@ -17,12 +23,12 @@ export const getInboxPullRequestsTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ start, limit }) => {
-      const response = await bitbucketClient.get('/inbox/pull-requests', {
+      const response = await bitbucketClient.get<PaginatedResponse<InboxPullRequest>>('/inbox/pull-requests', {
         params: { start, limit },
       });
 
       // Strip to minimal PR - only what agent needs to review
-      const minimalPr = (pr: any): any => {
+      const minimalPr = (pr: InboxPullRequest): MinimalPullRequest => {
         return {
           id: pr.id,
           title: pr.title,
@@ -36,7 +42,7 @@ export const getInboxPullRequestsTool = (server: McpServer) => {
         };
       };
 
-      const minimal = {
+      const minimal: InboxPullRequestsResponse = {
         size: response.data.size,
         limit: response.data.limit,
         isLastPage: response.data.isLastPage,

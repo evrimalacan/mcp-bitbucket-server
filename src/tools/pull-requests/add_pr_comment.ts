@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { bitbucketClient } from '../../services/bitbucket.js';
+import type { AddCommentBody, RestComment } from '../../types/index.js';
 
 const schema = z.object({
   projectKey: z.string().describe('The Bitbucket project key'),
@@ -23,7 +24,7 @@ export const addPrCommentTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, text, parentId, path, line, lineType, fileType }) => {
-      const body: any = { text };
+      const body: AddCommentBody = { text };
 
       if (parentId) {
         body.parent = { id: parentId };
@@ -41,7 +42,7 @@ export const addPrCommentTool = (server: McpServer) => {
         };
       }
 
-      const response = await bitbucketClient.post(
+      const response = await bitbucketClient.post<RestComment>(
         `/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/comments`,
         body,
       );

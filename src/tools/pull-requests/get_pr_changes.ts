@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { bitbucketClient } from '../../services/bitbucket.js';
+import type { ChangesResponse } from '../../types/index.js';
 
 const schema = z.object({
   projectKey: z.string().describe('The Bitbucket project key'),
@@ -19,7 +20,7 @@ export const getPrChangesTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, limit }) => {
-      const response = await bitbucketClient.get(
+      const response = await bitbucketClient.get<ChangesResponse>(
         `/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/changes`,
         { params: { withComments: 'true', limit } },
       );

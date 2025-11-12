@@ -1,6 +1,17 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { bitbucketClient } from '../../services/bitbucket.js';
+import type {
+  ActivitiesResponse,
+  PaginatedResponse,
+  RestComment,
+  RestCommentApiResponse,
+  RestCommentLikedBy,
+  RestCommentReaction,
+  RestPullRequestActivityApiResponse,
+  RestUser,
+  RestUserApiResponse,
+} from '../../types/index.js';
 
 // Activity action types from Bitbucket Server Swagger
 const ActivityType = z.enum([
@@ -46,89 +57,82 @@ export const getPrActivitiesTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, activityTypes, start, limit }) => {
-      const response = await bitbucketClient.get(
+      const response = await bitbucketClient.get<PaginatedResponse<RestPullRequestActivityApiResponse>>(
         `/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/activities`,
         {
           params: { fromType: 'COMMENT', start, limit },
         },
       );
 
-      // Helper function to strip user bloat
-      const stripUserBloat = (user: any): any => {
-        if (!user) return user;
+      // Helper function to strip user links (API returns links but we exclude from type)
+      const stripUserBloat = (user: RestUserApiResponse): RestUser => {
+        // biome-ignore lint/correctness/noUnusedVariables: Removing links field from API response
         const { links, ...userWithoutLinks } = user;
         return userWithoutLinks;
       };
 
       // Helper function to simplify reactions to just counts
-      const simplifyReactions = (reactions: any[]): any[] => {
+      const simplifyReactions = (
+        reactions: Array<{ emoticon: string; users?: Array<unknown> }>,
+      ): RestCommentReaction[] => {
         if (!reactions || !Array.isArray(reactions)) return reactions;
-        return reactions.map((reaction: any) => ({
+        return reactions.map((reaction) => ({
           emoticon: reaction.emoticon,
           count: reaction.users?.length || 0,
         }));
       };
 
       // Helper function to simplify likedBy to just count
-      const simplifyLikedBy = (likedBy: any): any => {
-        if (!likedBy) return likedBy;
+      const simplifyLikedBy = (likedBy: { total?: number }): RestCommentLikedBy => {
         return { total: likedBy.total || 0 };
       };
 
       // Helper function to strip bloat from comments
-      const stripBloatFromComment = (comment: any): any => {
-        if (!comment) return comment;
+      const stripBloatFromComment = (comment: RestCommentApiResponse): RestComment => {
+        // biome-ignore lint/correctness/noUnusedVariables: Removing anchor, commentAnchor, and permittedOperations from API response
+        const { anchor, commentAnchor, permittedOperations, ...rest } = comment as RestCommentApiResponse & {
+          commentAnchor?: unknown;
+        };
 
-        const { anchor, permittedOperations, ...strippedComment } = comment;
+        // Build clean comment with stripped user and simplified properties (no commentAnchor)
+        const cleanComment: RestComment = {
+          ...rest,
+          author: stripUserBloat(comment.author),
+          properties: comment.properties
+            ? {
+                reactions: comment.properties.reactions ? simplifyReactions(comment.properties.reactions) : undefined,
+                likedBy: comment.properties.likedBy ? simplifyLikedBy(comment.properties.likedBy) : undefined,
+              }
+            : undefined,
+          comments: comment.comments ? comment.comments.map(stripBloatFromComment) : undefined,
+        };
 
-        // Strip user links from author
-        if (strippedComment.author) {
-          strippedComment.author = stripUserBloat(strippedComment.author);
-        }
-
-        // Simplify reactions and likedBy in properties
-        if (strippedComment.properties) {
-          if (strippedComment.properties.reactions) {
-            strippedComment.properties.reactions = simplifyReactions(strippedComment.properties.reactions);
-          }
-          if (strippedComment.properties.likedBy) {
-            strippedComment.properties.likedBy = simplifyLikedBy(strippedComment.properties.likedBy);
-          }
-        }
-
-        // Recursively strip from nested comments (replies)
-        if (strippedComment.comments && Array.isArray(strippedComment.comments)) {
-          strippedComment.comments = strippedComment.comments.map(stripBloatFromComment);
-        }
-
-        return strippedComment;
+        return cleanComment;
       };
 
-      // Strip bloat from all activities
-      const strippedValues = response.data.values.map((activity: any) => {
-        const { diff, ...activityWithoutDiff } = activity;
+      // Strip bloat from all activities (remove diff field which is large)
+      const strippedValues = response.data.values.map((activity) => {
+        // biome-ignore lint/correctness/noUnusedVariables: Removing diff field from API response
+        const { diff, ...rest } = activity;
 
-        // Strip user links
-        if (activityWithoutDiff.user) {
-          activityWithoutDiff.user = stripUserBloat(activityWithoutDiff.user);
-        }
+        // Build clean activity with stripped user and comment
+        const cleanActivity = {
+          ...rest,
+          user: stripUserBloat(activity.user),
+          comment: activity.comment ? stripBloatFromComment(activity.comment) : undefined,
+        };
 
-        // Strip comment bloat
-        if (activityWithoutDiff.comment) {
-          activityWithoutDiff.comment = stripBloatFromComment(activityWithoutDiff.comment);
-        }
-
-        return activityWithoutDiff;
+        return cleanActivity;
       });
 
       // Filter by activity types if specified
-      let responseData = {
+      let responseData: ActivitiesResponse = {
         ...response.data,
         values: strippedValues,
       };
 
       if (activityTypes && activityTypes.length > 0) {
-        const filteredValues = strippedValues.filter((activity: any) => activityTypes.includes(activity.action));
+        const filteredValues = strippedValues.filter((activity) => activityTypes.includes(activity.action));
         responseData = {
           ...response.data,
           values: filteredValues,
