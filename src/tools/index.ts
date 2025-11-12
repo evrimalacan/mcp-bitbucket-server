@@ -6,6 +6,7 @@ import {
   getPrActivitiesTool,
   getPrChangesTool,
   getPrFileDiffTool,
+  updateReviewStatusTool,
 } from './pull-requests/index.js';
 import { listRepositoriesTool } from './repositories/index.js';
 import { getAllUsersTool, getUserProfileTool } from './users/index.js';
@@ -27,4 +28,5 @@ export function registerTools(server: McpServer) {
   getPrChangesTool(server);
   getPrFileDiffTool(server);
   getPrActivitiesTool(server);
+  updateReviewStatusTool(server);
 }

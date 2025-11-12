@@ -3,3 +3,4 @@ export * from './get_inbox_pull_requests.js';
 export * from './get_pr_activities.js';
 export * from './get_pr_changes.js';
 export * from './get_pr_file_diff.js';
+export * from './update_review_status.js';

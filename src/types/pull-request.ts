@@ -53,6 +53,16 @@ export type ActivityAction =
   | 'UPDATED';
 
 /**
+ * Participant role in a pull request.
+ */
+export type ParticipantRole = 'AUTHOR' | 'REVIEWER' | 'PARTICIPANT';
+
+/**
+ * Participant status in a pull request (review status).
+ */
+export type ParticipantStatus = 'UNAPPROVED' | 'NEEDS_WORK' | 'APPROVED';
+
+/**
  * Bitbucket Server user object (RestUser schema from Swagger).
  */
 export interface RestUser {
@@ -509,4 +519,21 @@ export interface AddCommentBody {
     lineType?: LineType;
     fileType?: FileType;
   };
+}
+
+/**
+ * Pull request participant (RestPullRequestParticipant schema from Swagger).
+ * Represents a user's participation in a pull request with their role and review status.
+ */
+export interface RestPullRequestParticipant {
+  /** User information */
+  user: RestUser;
+  /** Participant role */
+  role?: ParticipantRole;
+  /** Whether the participant approved the PR */
+  approved?: boolean;
+  /** Review status */
+  status?: ParticipantStatus;
+  /** Last commit hash reviewed by this participant */
+  lastReviewedCommit?: string;
 }
