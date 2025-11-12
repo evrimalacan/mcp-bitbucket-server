@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is an MCP (Model Context Protocol) server for Bitbucket Server/Data Center integration. The server provides tools for:
 - **User management**: Get user profile, list all users
 - **Repository operations**: List repositories in a project
-- **Pull request operations**: Get changed files, get structured diffs, add comments (general, replies, and inline)
+- **Pull request operations**: Get changed files, get structured diffs, add comments (general, replies, and inline), update review status (approve/request changes)
 
 ## Architecture
 
@@ -68,6 +68,7 @@ src/
 ├── types/
 │   ├── index.ts                # Barrel export for all types
 │   ├── common.ts               # Shared types (PaginatedResponse)
+│   ├── pull-request.ts         # Pull request types (RestComment, RestPullRequest, etc.)
 │   └── repository.ts           # Repository-specific types
 └── tools/
     ├── index.ts                # Tool registration
@@ -87,7 +88,8 @@ src/
         ├── add_pr_comment.ts           # POST /projects/.../pull-requests/.../comments
         ├── get_pr_changes.ts           # GET /projects/.../pull-requests/.../changes
         ├── get_pr_file_diff.ts         # GET /projects/.../pull-requests/.../diff/{path}
-        └── get_pr_activities.ts        # GET /projects/.../pull-requests/.../activities
+        ├── get_pr_activities.ts        # GET /projects/.../pull-requests/.../activities
+        └── update_review_status.ts     # PUT /projects/.../pull-requests/.../participants/{userSlug}
 ```
 
 ## TypeScript Types
@@ -98,6 +100,7 @@ TypeScript type definitions for Bitbucket Server API responses are located in `s
 src/types/
 ├── index.ts         # Barrel export (import from here)
 ├── common.ts        # Shared types (PaginatedResponse)
+├── pull-request.ts  # Pull request types (RestComment, RestPullRequest, RestPullRequestParticipant, etc.)
 └── repository.ts    # Repository-specific types
 ```
 
@@ -445,6 +448,29 @@ export const getAllUsersTool = (server: McpServer) => {
 
 **Purpose**: Get an overview of PR activity. Can filter to specific types (e.g., only comments) to reduce response size. Each comment activity includes full comment text, author, and creation date. For inline comments, use `commentAnchor` (path, line, lineType, fileType) to fetch the relevant diff separately.
 
+### bitbucket_update_review_status
+**File**: `src/tools/pull-requests/update_review_status.ts`
+**Endpoint**: `PUT /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/participants/{userSlug}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `status` (required): Review status - `APPROVED`, `NEEDS_WORK`, or `UNAPPROVED`
+
+**Auto-detected**:
+- `userSlug`: Automatically detected from the authenticated user via `X-AUSERNAME` response header
+
+**Returns**: Updated participant object with review status, role, and lastReviewedCommit.
+
+**Purpose**: Change the authenticated user's review status for a PR. Automatically adds the user as a participant/reviewer if not already. The API automatically updates `lastReviewedCommit` to the latest commit when status is `APPROVED` or `NEEDS_WORK`. Only requires `REPO_READ` permission.
+
+**Status Values**:
+- `APPROVED` - Approve the PR
+- `NEEDS_WORK` - Request changes (shows as "Requested changes" in UI from 8.10+)
+- `UNAPPROVED` - Neutral/remove approval
+
+**Note**: The tool makes a lightweight request to `/application-properties` to extract the authenticated username from the `X-AUSERNAME` response header, eliminating the need for users to provide their own slug.
+
 ## Pull Request Review Workflow
 
 For agents reviewing PRs and leaving comments on specific lines:
@@ -492,11 +518,27 @@ For agents reviewing PRs and leaving comments on specific lines:
    )
    ```
 
+5. **Update review status**:
+   ```
+   # Approve the PR
+   bitbucket_update_review_status(
+     projectKey, repositorySlug, pullRequestId,
+     status="APPROVED"
+   )
+
+   # Or request changes
+   bitbucket_update_review_status(
+     projectKey, repositorySlug, pullRequestId,
+     status="NEEDS_WORK"
+   )
+   ```
+
 **Key Points**:
 - Use `destination` line numbers from the diff for the `TO` side (most common)
 - Use `source` line numbers for the `FROM` side
 - Match `lineType` to the segment type from the diff (ADDED/REMOVED/CONTEXT)
 - The structured diff ensures exact line number accuracy
+- `userSlug` is automatically detected - no need to provide it
 
 ## Development Commands
 
