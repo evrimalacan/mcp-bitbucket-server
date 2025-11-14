@@ -3,6 +3,7 @@ import type {
   AddCommentBody,
   AddPullRequestCommentParams,
   ChangesResponse,
+  DeletePullRequestCommentParams,
   DiffResponse,
   GetAllUsersParams,
   GetInboxPullRequestsParams,
@@ -183,6 +184,22 @@ export class BitbucketService {
       body,
     );
     return response.data;
+  }
+
+  /**
+   * Delete a pull request comment. Returns void on success (HTTP 204).
+   * Anyone can delete their own comment. Only REPO_ADMIN can delete others' comments.
+   * Comments with replies cannot be deleted.
+   */
+  async deletePullRequestComment(params: DeletePullRequestCommentParams): Promise<void> {
+    const { projectKey, repositorySlug, pullRequestId, commentId, version } = params;
+
+    await this.client.delete(
+      `/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/comments/${commentId}`,
+      {
+        params: { version },
+      },
+    );
   }
 
   /**

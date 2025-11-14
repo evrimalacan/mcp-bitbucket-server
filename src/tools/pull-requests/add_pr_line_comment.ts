@@ -12,9 +12,7 @@ const schema = z.object({
   lineType: z
     .enum(['ADDED', 'REMOVED', 'CONTEXT'])
     .describe('Type of line: ADDED (green +), REMOVED (red -), or CONTEXT (unchanged)'),
-  fileType: z
-    .enum(['FROM', 'TO'])
-    .describe('Side of diff: FROM (source/old) or TO (destination/new)'),
+  fileType: z.enum(['FROM', 'TO']).describe('Side of diff: FROM (source/old) or TO (destination/new)'),
 });
 
 export const addPrLineCommentTool = (server: McpServer) => {

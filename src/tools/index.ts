@@ -4,6 +4,7 @@ import {
   addPrCommentTool,
   addPrFileCommentTool,
   addPrLineCommentTool,
+  deletePrCommentTool,
   getInboxPullRequestsTool,
   getPrActivitiesTool,
   getPrChangesTool,
@@ -32,6 +33,7 @@ export function registerTools(server: McpServer) {
   addPrCommentTool(server);
   addPrFileCommentTool(server);
   addPrLineCommentTool(server);
+  deletePrCommentTool(server);
   getPrChangesTool(server);
   getPullRequestDiffTool(server);
   getPrFileDiffTool(server);

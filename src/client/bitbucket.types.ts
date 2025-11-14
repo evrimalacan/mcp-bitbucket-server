@@ -762,6 +762,22 @@ export interface AddPullRequestCommentParams {
 }
 
 /**
+ * Parameters for deleting a pull request comment.
+ */
+export interface DeletePullRequestCommentParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** The comment ID to delete */
+  commentId: number;
+  /** The expected version of the comment (prevents concurrent modification conflicts) */
+  version: number;
+}
+
+/**
  * Parameters for updateReviewStatus method
  */
 export interface UpdateReviewStatusParams {

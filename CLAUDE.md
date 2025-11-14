@@ -541,6 +541,25 @@ export const getAllUsersTool = (server: McpServer) => {
 
 **Note**: The tool makes a lightweight request to `/application-properties` to extract the authenticated username from the `X-AUSERNAME` response header, eliminating the need for users to provide their own slug.
 
+### bitbucket_delete_pr_comment
+**File**: `src/tools/pull-requests/delete_pr_comment.ts`
+**Endpoint**: `DELETE /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments/{commentId}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `commentId` (required): The ID of the comment to delete
+- `version` (required): The expected version of the comment (for optimistic locking)
+
+**Returns**: Simple success message confirming deletion.
+
+**Purpose**: Delete a pull request comment. You can delete your own comments. Only REPO_ADMIN users can delete comments created by others. Comments with replies cannot be deleted. The `version` parameter must be provided to prevent concurrent modification conflicts - get the version from the comment object returned by other tools.
+
+**Permissions**:
+- Own comments: Any user can delete their own comments
+- Others' comments: Requires REPO_ADMIN permission
+- Comments with replies: Cannot be deleted (will return error)
+
 ## Pull Request Review Workflow
 
 For agents reviewing PRs and leaving comments on specific lines:
