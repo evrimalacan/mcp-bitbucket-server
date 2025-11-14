@@ -2,10 +2,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { listProjectsTool } from './projects/index.js';
 import {
   addPrCommentTool,
+  addPrFileCommentTool,
+  addPrLineCommentTool,
   getInboxPullRequestsTool,
   getPrActivitiesTool,
   getPrChangesTool,
   getPrFileDiffTool,
+  getPullRequestDetailsTool,
+  getPullRequestDiffTool,
   updateReviewStatusTool,
 } from './pull-requests/index.js';
 import { listRepositoriesTool } from './repositories/index.js';
@@ -24,8 +28,12 @@ export function registerTools(server: McpServer) {
 
   // Pull request tools
   getInboxPullRequestsTool(server);
+  getPullRequestDetailsTool(server);
   addPrCommentTool(server);
+  addPrFileCommentTool(server);
+  addPrLineCommentTool(server);
   getPrChangesTool(server);
+  getPullRequestDiffTool(server);
   getPrFileDiffTool(server);
   getPrActivitiesTool(server);
   updateReviewStatusTool(server);

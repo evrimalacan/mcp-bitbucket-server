@@ -7,36 +7,32 @@ const schema = z.object({
   repositorySlug: z.string().describe('The repository slug'),
   pullRequestId: z.number().describe('The pull request ID'),
   text: z.string().describe('The comment text'),
-  parentId: z.number().optional().describe('Parent comment ID to reply to an existing comment'),
+  path: z.string().describe('File path to attach the comment to (e.g., "src/main.ts")'),
 });
 
-export const addPrCommentTool = (server: McpServer) => {
+export const addPrFileCommentTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_add_pr_comment',
+    'bitbucket_add_pr_file_comment',
     {
-      title: 'Add General Pull Request Comment',
+      title: 'Add File-Level Pull Request Comment',
       description:
-        'Add a general comment to a pull request (not attached to any specific file or line). Use parentId to reply to an existing comment. For file or line-specific comments, use bitbucket_add_pr_file_comment or bitbucket_add_pr_line_comment instead.',
+        'Add a comment attached to a specific file in a pull request (not to a specific line). The comment will appear at the file level in the PR diff view. To reply to an existing comment (including file/line comments), use bitbucket_add_pr_comment instead.',
       inputSchema: schema.shape,
     },
-    async ({ projectKey, repositorySlug, pullRequestId, text, parentId }) => {
+    async ({ projectKey, repositorySlug, pullRequestId, text, path }) => {
       const result = await bitbucketService.addPullRequestComment({
         projectKey,
         repositorySlug,
         pullRequestId,
         text,
-        parentId,
+        path,
       });
-
-      const message = parentId
-        ? `Reply added successfully. Comment ID: ${result.id}`
-        : `Comment added successfully. Comment ID: ${result.id}`;
 
       return {
         content: [
           {
             type: 'text',
-            text: message,
+            text: `File comment added successfully. Comment ID: ${result.id}`,
           },
         ],
       };

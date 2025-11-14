@@ -6,24 +6,22 @@ const schema = z.object({
   projectKey: z.string().describe('The Bitbucket project key'),
   repositorySlug: z.string().describe('The repository slug'),
   pullRequestId: z.number().describe('The pull request ID'),
-  limit: z.number().optional().describe('Number of items to return (default: 25, note: endpoint is not paged)'),
 });
 
-export const getPrChangesTool = (server: McpServer) => {
+export const getPullRequestDetailsTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_get_pull_request_changes',
+    'bitbucket_get_pull_request',
     {
-      title: 'Get Pull Request Changes',
+      title: 'Get Pull Request Details',
       description:
-        'Gets a list of all changed files in a pull request with file-level metadata (file paths, change types like ADD/MODIFY/DELETE, content IDs). This is useful for getting an overview of what files changed. For line-by-line diff data, use bitbucket_get_pull_request_file_diff.',
+        'Retrieve full details for a pull request including title, description, author, state, source branch (fromRef), destination branch (toRef), created/updated dates, reviewers, and participants. Use this to get comprehensive PR metadata.',
       inputSchema: schema.shape,
     },
-    async ({ projectKey, repositorySlug, pullRequestId, limit }) => {
-      const result = await bitbucketService.getPullRequestChanges({
+    async ({ projectKey, repositorySlug, pullRequestId }) => {
+      const result = await bitbucketService.getPullRequest({
         projectKey,
         repositorySlug,
         pullRequestId,
-        limit,
       });
 
       return {

@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { bitbucketClient } from '../../services/bitbucket.js';
+import { bitbucketService } from '../../services/bitbucket.js';
 
 const schema = z.object({
   name: z.string().optional().describe('Filter projects by name (partial match)'),
@@ -19,15 +19,13 @@ export const listProjectsTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ name, permission, start, limit }) => {
-      const response = await bitbucketClient.get('/projects', {
-        params: { name, permission, start, limit },
-      });
+      const result = await bitbucketService.listProjects({ name, permission, start, limit });
 
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response.data, null, 2),
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };

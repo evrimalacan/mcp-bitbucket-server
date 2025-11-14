@@ -1,5 +1,132 @@
-import type { PaginatedResponse } from './common.js';
-import type { RestRepository } from './repository.js';
+// =============================================================================
+// Common Types
+// =============================================================================
+
+/**
+ * Generic paginated response wrapper for Bitbucket Server API responses.
+ * Most list endpoints in Bitbucket Server return this structure.
+ */
+export interface PaginatedResponse<T> {
+  /** Whether this is the last page of results */
+  isLastPage: boolean;
+  /** Maximum number of items per page */
+  limit: number;
+  /** Starting index for the next page (only present if not last page) */
+  nextPageStart?: number;
+  /** Number of items in this page */
+  size: number;
+  /** Starting index of this page */
+  start: number;
+  /** Array of items in this page */
+  values: T[];
+}
+
+// =============================================================================
+// Repository & Project Types
+// =============================================================================
+
+/**
+ * Link object from Bitbucket Server API.
+ */
+export interface RestLink {
+  /** Link URL */
+  href: string;
+  /** Link name (optional) */
+  name?: string;
+}
+
+/**
+ * Links object from Bitbucket Server API responses.
+ */
+export interface RestLinks {
+  /** Self links */
+  self?: RestLink[];
+  /** Clone links */
+  clone?: RestLink[];
+  /** Alternative links */
+  [key: string]: RestLink[] | undefined;
+}
+
+/**
+ * Repository state values from Bitbucket Server.
+ */
+export type RepositoryState = 'AVAILABLE' | 'INITIALISATION_FAILED' | 'INITIALISING' | 'OFFLINE';
+
+/**
+ * Project type values from Bitbucket Server.
+ */
+export type ProjectType = 'NORMAL' | 'PERSONAL';
+
+/**
+ * Bitbucket Server project information (RestProject schema from Swagger).
+ * Simplified to include only commonly used readonly fields.
+ */
+export interface RestProject {
+  /** Project ID */
+  id: number;
+  /** Project key (e.g., "PRJ") */
+  key: string;
+  /** Project name (e.g., "My Cool Project") */
+  name: string;
+  /** Project description */
+  description?: string;
+  /** Project type */
+  type: ProjectType;
+  /** Whether the project is public */
+  public?: boolean;
+  /** Project scope (e.g., "PROJECT") */
+  scope?: string;
+  /** Links */
+  links?: RestLinks;
+}
+
+/**
+ * Bitbucket Server repository information (RestRepository schema from Swagger).
+ * Simplified to include only commonly used readonly fields.
+ */
+export interface RestRepository {
+  /** Repository ID */
+  id: number;
+  /** Repository name (e.g., "My repo") */
+  name: string;
+  /** Repository slug (e.g., "my-repo") */
+  slug: string;
+  /** Repository description */
+  description?: string;
+  /** Hierarchy ID (e.g., "e3c939f9ef4a7fae272e") */
+  hierarchyId?: string;
+  /** SCM ID (e.g., "git") */
+  scmId?: string;
+  /** Repository state */
+  state?: RepositoryState;
+  /** Status message (e.g., "Available") */
+  statusMessage?: string;
+  /** Whether the repository is forkable */
+  forkable?: boolean;
+  /** Whether the repository is archived */
+  archived?: boolean;
+  /** Whether the repository is public */
+  public?: boolean;
+  /** Repository partition */
+  partition?: number;
+  /** Repository scope (e.g., "REPOSITORY") */
+  scope?: string;
+  /** Project this repository belongs to */
+  project?: RestProject;
+  /** Origin repository (for forks) */
+  origin?: RestRepository;
+  /** Links */
+  links?: RestLinks;
+}
+
+/**
+ * Response type for list repositories endpoint.
+ */
+export type RepositoriesResponse = PaginatedResponse<RestRepository>;
+
+// =============================================================================
+// Pull Request Types
+// =============================================================================
 
 /**
  * Pull request state values from Bitbucket Server.
@@ -80,6 +207,8 @@ export interface RestUser {
   type?: UserType;
   /** Whether user is active */
   active?: boolean;
+  /** Links */
+  links?: RestLinks;
 }
 
 /**
@@ -133,36 +262,8 @@ export interface RestCommentAnchor {
 }
 
 /**
- * Comment reaction with simplified count.
- */
-export interface RestCommentReaction {
-  /** Emoticon/emoji */
-  emoticon: string;
-  /** Number of users who reacted */
-  count: number;
-}
-
-/**
- * Simplified liked-by information.
- */
-export interface RestCommentLikedBy {
-  /** Total number of likes */
-  total: number;
-}
-
-/**
- * Comment properties with simplified reactions and likes.
- */
-export interface RestCommentProperties {
-  /** Reactions to the comment */
-  reactions?: RestCommentReaction[];
-  /** Like information */
-  likedBy?: RestCommentLikedBy;
-}
-
-/**
  * Bitbucket Server comment object (RestComment schema from Swagger).
- * Simplified to remove bloat (permittedOperations, anchor/commentAnchor, full reactions, etc.)
+ * Represents the raw API response structure.
  */
 export interface RestComment {
   /** Comment ID */
@@ -179,8 +280,22 @@ export interface RestComment {
   version: number;
   /** Nested replies */
   comments?: RestComment[];
-  /** Comment properties */
-  properties?: RestCommentProperties;
+  /** Comment anchor (file/line location) */
+  anchor?: RestCommentAnchor;
+  /** Permitted operations */
+  permittedOperations?: unknown;
+  /** Comment properties (reactions, likes) */
+  properties?: {
+    /** Reactions with full user arrays */
+    reactions?: Array<{
+      emoticon: string;
+      users?: Array<unknown>;
+    }>;
+    /** Like information */
+    likedBy?: {
+      total?: number;
+    };
+  };
   /** Parent comment (for replies) */
   parent?: { id: number };
 }
@@ -236,37 +351,6 @@ export interface RestPullRequest {
     status: string;
   }>;
 }
-
-/**
- * Minimal pull request object returned by get_inbox_pull_requests.
- * Optimized version with only essential review information (~92% smaller).
- */
-export interface MinimalPullRequest {
-  /** Pull request ID */
-  id: number;
-  /** Pull request title */
-  title: string;
-  /** Pull request description */
-  description?: string;
-  /** Pull request state */
-  state: PullRequestState;
-  /** Author display name (simplified from full user object) */
-  author: string;
-  /** Project key (flattened from toRef.repository.project.key) */
-  projectKey: string;
-  /** Repository slug (flattened from toRef.repository.slug) */
-  repositorySlug: string;
-  /** Creation timestamp */
-  createdDate: number;
-  /** Last update timestamp */
-  updatedDate: number;
-}
-
-/**
- * Response type for inbox pull requests endpoint.
- * Contains paginated list of minimal PRs.
- */
-export interface InboxPullRequestsResponse extends PaginatedResponse<MinimalPullRequest> {}
 
 /**
  * File change in a pull request (RestChange schema from Swagger).
@@ -393,7 +477,7 @@ export interface DiffResponse {
 
 /**
  * Pull request activity (RestPullRequestActivity schema from Swagger).
- * Optimized to remove diff, user.links, and simplify reactions.
+ * Base activity structure without diff field (diff is in RestPullRequestActivityApiResponse).
  */
 export interface RestPullRequestActivity {
   /** Activity ID */
@@ -408,6 +492,8 @@ export interface RestPullRequestActivity {
   comment?: RestComment;
   /** Comment action (for comment activities) */
   commentAction?: string;
+  /** Comment anchor (location in code where comment was made) */
+  commentAnchor?: RestCommentAnchor;
   /** Commit ID (for commit activities) */
   commit?: {
     id: string;
@@ -429,46 +515,27 @@ export type ActivitiesResponse = PaginatedResponse<RestPullRequestActivity>;
 // =============================================================================
 
 /**
- * User object as returned by Bitbucket API (includes links that we strip).
+ * User object as returned by Bitbucket API.
+ * Alias for RestUser since base type now includes all API fields.
  */
-export interface RestUserApiResponse extends RestUser {
-  /** Links object (stripped in our responses) */
-  links?: unknown;
-}
+export interface RestUserApiResponse extends RestUser {}
 
 /**
- * Comment object as returned by Bitbucket API (includes fields we strip).
+ * Comment object as returned by Bitbucket API.
+ * Alias for RestComment since base type now matches full API response.
  */
-export interface RestCommentApiResponse extends Omit<RestComment, 'author' | 'comments' | 'properties'> {
-  /** Author with links */
-  author: RestUserApiResponse;
-  /** Nested comments with API response structure */
-  comments?: RestCommentApiResponse[];
-  /** Anchor field (we rename to commentAnchor in our type) */
-  anchor?: RestCommentAnchor;
-  /** Permitted operations (stripped in our responses) */
-  permittedOperations?: unknown;
-  /** Properties with full reaction structure (before simplification) */
-  properties?: {
-    reactions?: Array<{
-      emoticon: string;
-      users?: Array<unknown>;
-    }>;
-    likedBy?: {
-      total?: number;
-    };
-  };
-}
+export interface RestCommentApiResponse extends RestComment {}
 
 /**
- * Pull request activity as returned by Bitbucket API (includes diff field we strip).
+ * Pull request activity as returned by Bitbucket API.
+ * Includes diff field and full user/comment structures.
  */
 export interface RestPullRequestActivityApiResponse extends Omit<RestPullRequestActivity, 'user' | 'comment'> {
   /** User with links */
   user: RestUserApiResponse;
   /** Comment with API structure */
   comment?: RestCommentApiResponse;
-  /** Diff field (stripped in our responses to save ~50% tokens) */
+  /** Diff field (contains code changes context) */
   diff?: unknown;
 }
 
@@ -477,7 +544,7 @@ export interface RestPullRequestActivityApiResponse extends Omit<RestPullRequest
  */
 export interface RestRepositoryWithProject extends Omit<RestRepository, 'project'> {
   /** Project (required for inbox PRs) */
-  project: import('./repository.js').RestProject;
+  project: RestProject;
 }
 
 /**
@@ -536,4 +603,174 @@ export interface RestPullRequestParticipant {
   status?: ParticipantStatus;
   /** Last commit hash reviewed by this participant */
   lastReviewedCommit?: string;
+}
+
+// =============================================================================
+// Method Parameter Types - For BitbucketService Methods
+// =============================================================================
+
+/**
+ * Parameters for getUserProfile method
+ */
+export interface GetUserProfileParams {
+  /** The username/slug of the Bitbucket Server user */
+  username: string;
+}
+
+/**
+ * Parameters for getAllUsers method
+ */
+export interface GetAllUsersParams {
+  /** Filter users by username, name or email address (partial match) */
+  filter?: string;
+}
+
+/**
+ * Parameters for listProjects method
+ */
+export interface ListProjectsParams {
+  /** Filter projects by name (partial match) */
+  name?: string;
+  /** Filter by permission (e.g., PROJECT_READ, PROJECT_WRITE, PROJECT_ADMIN) */
+  permission?: string;
+  /** Starting index for pagination (default: 0) */
+  start?: number;
+  /** Maximum number of projects to return (default: 25) */
+  limit?: number;
+}
+
+/**
+ * Parameters for listRepositories method
+ */
+export interface ListRepositoriesParams {
+  /** The Bitbucket Server project key */
+  projectKey: string;
+}
+
+/**
+ * Parameters for getInboxPullRequests method
+ */
+export interface GetInboxPullRequestsParams {
+  /** Starting index for pagination (default: 0) */
+  start?: number;
+  /** Maximum number of pull requests to return (default: 25) */
+  limit?: number;
+}
+
+/**
+ * Parameters for getPullRequestChanges method
+ */
+export interface GetPullRequestChangesParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** Number of items to return (default: 25, note: endpoint is not paged) */
+  limit?: number;
+}
+
+/**
+ * Parameters for getting pull request details.
+ */
+export interface GetPullRequestParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+}
+
+/**
+ * Parameters for getting pull request diff.
+ */
+export interface GetPullRequestDiffParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** Path to file (optional - empty for full PR diff) */
+  path?: string;
+  /** Number of context lines around changes (default: 10) */
+  contextLines?: number;
+  /** Whitespace handling: 'show' or 'ignore-all' */
+  whitespace?: 'show' | 'ignore-all';
+  /** Response format: 'text' for raw diff, 'json' for structured (default: 'text') */
+  format?: 'text' | 'json';
+}
+
+/**
+ * Parameters for getPullRequestFileDiff method
+ */
+export interface GetPullRequestFileDiffParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** The path to the file to diff (e.g., 'src/main.ts') */
+  path: string;
+  /** Number of context lines around added/removed lines (default: 10) */
+  contextLines?: number;
+}
+
+/**
+ * Parameters for getPullRequestActivities method
+ */
+export interface GetPullRequestActivitiesParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** Filter activities by type (e.g., ["COMMENTED", "REVIEW_COMMENTED"]) */
+  activityTypes?: string[];
+  /** Starting index for pagination (default: 0) */
+  start?: number;
+  /** Maximum number of items to return (default: 25) */
+  limit?: number;
+}
+
+/**
+ * Parameters for addPullRequestComment method
+ */
+export interface AddPullRequestCommentParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** The comment text */
+  text: string;
+  /** Parent comment ID for replies */
+  parentId?: number;
+  /** File path for file-specific comments */
+  path?: string;
+  /** Line number for inline comments */
+  line?: number;
+  /** Type of line (default: CONTEXT) */
+  lineType?: LineType;
+  /** Side of diff (default: TO) */
+  fileType?: FileType;
+}
+
+/**
+ * Parameters for updateReviewStatus method
+ */
+export interface UpdateReviewStatusParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** The review status: APPROVED (approve), NEEDS_WORK (request changes), or UNAPPROVED (neutral/remove approval) */
+  status: ParticipantStatus;
 }

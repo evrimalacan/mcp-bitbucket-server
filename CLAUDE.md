@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an MCP (Model Context Protocol) server for Bitbucket Server/Data Center integration. The server provides tools for:
 - **User management**: Get user profile, list all users
+- **Project operations**: List projects with filtering
 - **Repository operations**: List repositories in a project
-- **Pull request operations**: Get changed files, get structured diffs, add comments (general, replies, and inline), update review status (approve/request changes)
+- **Pull request operations**: Get PR details, get inbox PRs, get changed files, get full/file diffs (text and structured), add comments (three separate tools: general, file-level, and line-level), get activities, update review status (approve/request changes)
 
 ## Architecture
 
@@ -363,6 +364,46 @@ export const getAllUsersTool = (server: McpServer) => {
 
 **Purpose**: Discover all PRs across all projects and repositories that need your review in one call. Much more efficient than querying project by project. Use the `id`, `projectKey`, and `repositorySlug` from the response to review specific PRs with other tools.
 
+### bitbucket_get_pull_request
+**File**: `src/tools/pull-requests/get_pr_details.ts`
+**Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+
+**Returns**: Full pull request object including:
+- `id`, `version`, `title`, `description`
+- `state` (OPEN/MERGED/DECLINED), `open`, `closed`
+- `fromRef` - Source branch with `displayId` (branch name) and `latestCommit`
+- `toRef` - Destination branch with `displayId` and `latestCommit`
+- `author` - Author user object with display name, role, and approval status
+- `reviewers` - Array of reviewer objects
+- `participants` - Array of participant objects
+- `createdDate`, `updatedDate` - Timestamps
+
+**Purpose**: Get comprehensive metadata for a pull request. Use this when you need full PR details including source/destination branches, author information, and reviewers. Essential for tools that need to understand PR context before performing operations.
+
+### bitbucket_get_pull_request_diff
+**File**: `src/tools/pull-requests/get_pr_diff.ts`
+**Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/diff/{path}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `path` (optional): File path (omit or empty string for full PR diff)
+- `contextLines` (optional): Number of context lines around changes (default: 10)
+- `whitespace` (optional): 'show' or 'ignore-all' (default: show)
+- `format` (optional): 'text' or 'json' (default: 'text')
+  - `'text'`: Returns raw diff as plain text string (uses `Accept: text/plain` header)
+  - `'json'`: Returns structured diff object with hunks/segments (uses `Accept: application/json` header)
+
+**Returns**:
+- When `format='text'` (default): Raw diff as plain text in unified diff format (string)
+- When `format='json'`: Structured diff object (DiffResponse) with hunks, segments, and line-by-line data
+
+**Purpose**: Get the complete diff for a PR in one call (when `path` is omitted) or for a specific file. The format parameter controls the response type based on the Accept header. Use `format='text'` (default) for raw text suitable for parsing or display - the background-greg service uses this for generating PR review contexts. Use `format='json'` when you need structured data with exact line numbers and segments.
+
 ### bitbucket_add_pr_comment
 **File**: `src/tools/pull-requests/add_pr_comment.ts`
 **Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
@@ -371,13 +412,42 @@ export const getAllUsersTool = (server: McpServer) => {
 - `repositorySlug` (required): The repository slug
 - `pullRequestId` (required): The pull request ID
 - `text` (required): The comment text
-- `parentId` (optional): Parent comment ID for replies
-- `path` (optional): File path for file-specific comments
-- `line` (optional): Line number for inline comments
-- `lineType` (optional): "ADDED", "REMOVED", or "CONTEXT" (default: CONTEXT)
-- `fileType` (optional): "FROM" or "TO" (default: TO)
+- `parentId` (optional): Parent comment ID to reply to an existing comment
 
-**Note**: This single tool handles general comments, replies, and inline file/line comments through optional parameters.
+**Purpose**: Add a general comment to a pull request that is not attached to any specific file or line. Also use this tool for all replies - when you provide `parentId`, the reply automatically inherits the location (file/line) from the parent comment, so you don't need to specify path/line/lineType/fileType. For creating file-specific or line-specific comments, use the specialized tools below.
+
+**Returns**: Simple success message with comment ID.
+
+### bitbucket_add_pr_file_comment
+**File**: `src/tools/pull-requests/add_pr_file_comment.ts`
+**Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `text` (required): The comment text
+- `path` (required): File path to attach the comment to (e.g., "src/main.ts")
+
+**Purpose**: Add a comment attached to a specific file in the PR (file-level comment, not line-specific). The comment will appear at the file level in the PR diff view. For replies to existing comments, use bitbucket_add_pr_comment with parentId.
+
+**Returns**: Simple success message with comment ID.
+
+### bitbucket_add_pr_line_comment
+**File**: `src/tools/pull-requests/add_pr_line_comment.ts`
+**Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `text` (required): The comment text
+- `path` (required): File path (e.g., "src/main.ts")
+- `line` (required): Line number to comment on (use destination line number from diff)
+- `lineType` (required): Type of line - "ADDED" (green +), "REMOVED" (red -), or "CONTEXT" (unchanged)
+- `fileType` (required): Side of diff - "FROM" (source/old) or "TO" (destination/new)
+
+**Purpose**: Add an inline comment to a specific line in the PR diff. Use line numbers from `bitbucket_get_pull_request_file_diff` (destination line for TO side, source line for FROM side). Match the `lineType` to the segment type from the diff. For replies to existing comments, use bitbucket_add_pr_comment with parentId.
+
+**Returns**: Simple success message with comment ID.
 
 ### bitbucket_get_pull_request_changes
 **File**: `src/tools/pull-requests/get_pr_changes.ts`
@@ -508,7 +578,7 @@ For agents reviewing PRs and leaving comments on specific lines:
 
 4. **Comment on specific lines**:
    ```
-   bitbucket_add_pr_comment(
+   bitbucket_add_pr_line_comment(
      projectKey, repositorySlug, pullRequestId,
      text="Consider using const here",
      path="src/main.ts",

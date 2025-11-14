@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+// ============ Library Exports ============
+// Re-export everything from client for library usage
+export * from './client/index.js';
+
+// ============ MCP Server Setup ============
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerTools } from './tools/index.js';

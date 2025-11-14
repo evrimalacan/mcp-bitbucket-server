@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { bitbucketClient } from '../../services/bitbucket.js';
+import { bitbucketService } from '../../services/bitbucket.js';
 
 const schema = z.object({
   username: z.string().describe('The username/slug of the Bitbucket Server user'),
@@ -15,13 +15,15 @@ export const getUserProfileTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ username }) => {
-      const response = await bitbucketClient.get(`/users/${username}`);
+      // Call service method
+      const user = await bitbucketService.getUserProfile({ username });
 
+      // Return full data (no stripping needed for user profile)
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response.data, null, 2),
+            text: JSON.stringify(user, null, 2),
           },
         ],
       };

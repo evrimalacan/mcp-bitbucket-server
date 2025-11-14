@@ -1,7 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { bitbucketClient } from '../../services/bitbucket.js';
-import type { DiffResponse } from '../../types/index.js';
+import { bitbucketService } from '../../services/bitbucket.js';
 
 const schema = z.object({
   projectKey: z.string().describe('The Bitbucket project key'),
@@ -21,16 +20,19 @@ export const getPrFileDiffTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, path, contextLines }) => {
-      const response = await bitbucketClient.get<DiffResponse>(
-        `/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/diff/${path}`,
-        { params: { withComments: 'true', contextLines } },
-      );
+      const result = await bitbucketService.getPullRequestFileDiff({
+        projectKey,
+        repositorySlug,
+        pullRequestId,
+        path,
+        contextLines,
+      });
 
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(response.data, null, 2),
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };

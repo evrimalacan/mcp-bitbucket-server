@@ -1,17 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { bitbucketClient } from '../../services/bitbucket.js';
+import type { RestComment, RestUser, RestUserApiResponse } from '../../client/bitbucket.types.js';
+import { bitbucketService } from '../../services/bitbucket.js';
 import type {
-  ActivitiesResponse,
-  PaginatedResponse,
-  RestComment,
-  RestCommentApiResponse,
-  RestCommentLikedBy,
-  RestCommentReaction,
-  RestPullRequestActivityApiResponse,
-  RestUser,
-  RestUserApiResponse,
-} from '../../types/index.js';
+  OptimizedActivitiesResponse,
+  OptimizedComment,
+  OptimizedCommentLikedBy,
+  OptimizedCommentReaction,
+} from '../tools.types.js';
 
 // Activity action types from Bitbucket Server Swagger
 const ActivityType = z.enum([
@@ -57,12 +53,13 @@ export const getPrActivitiesTool = (server: McpServer) => {
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, activityTypes, start, limit }) => {
-      const response = await bitbucketClient.get<PaginatedResponse<RestPullRequestActivityApiResponse>>(
-        `/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/activities`,
-        {
-          params: { fromType: 'COMMENT', start, limit },
-        },
-      );
+      const response = await bitbucketService.getPullRequestActivities({
+        projectKey,
+        repositorySlug,
+        pullRequestId,
+        start,
+        limit,
+      });
 
       // Helper function to strip user links (API returns links but we exclude from type)
       const stripUserBloat = (user: RestUserApiResponse): RestUser => {
@@ -74,7 +71,7 @@ export const getPrActivitiesTool = (server: McpServer) => {
       // Helper function to simplify reactions to just counts
       const simplifyReactions = (
         reactions: Array<{ emoticon: string; users?: Array<unknown> }>,
-      ): RestCommentReaction[] => {
+      ): OptimizedCommentReaction[] => {
         if (!reactions || !Array.isArray(reactions)) return reactions;
         return reactions.map((reaction) => ({
           emoticon: reaction.emoticon,
@@ -83,19 +80,17 @@ export const getPrActivitiesTool = (server: McpServer) => {
       };
 
       // Helper function to simplify likedBy to just count
-      const simplifyLikedBy = (likedBy: { total?: number }): RestCommentLikedBy => {
+      const simplifyLikedBy = (likedBy: { total?: number }): OptimizedCommentLikedBy => {
         return { total: likedBy.total || 0 };
       };
 
       // Helper function to strip bloat from comments
-      const stripBloatFromComment = (comment: RestCommentApiResponse): RestComment => {
-        // biome-ignore lint/correctness/noUnusedVariables: Removing anchor, commentAnchor, and permittedOperations from API response
-        const { anchor, commentAnchor, permittedOperations, ...rest } = comment as RestCommentApiResponse & {
-          commentAnchor?: unknown;
-        };
+      const stripBloatFromComment = (comment: RestComment): OptimizedComment => {
+        // biome-ignore lint/correctness/noUnusedVariables: Removing anchor and permittedOperations from API response
+        const { anchor, permittedOperations, ...rest } = comment;
 
-        // Build clean comment with stripped user and simplified properties (no commentAnchor)
-        const cleanComment: RestComment = {
+        // Build optimized comment with stripped user and simplified properties
+        const optimizedComment: OptimizedComment = {
           ...rest,
           author: stripUserBloat(comment.author),
           properties: comment.properties
@@ -107,11 +102,11 @@ export const getPrActivitiesTool = (server: McpServer) => {
           comments: comment.comments ? comment.comments.map(stripBloatFromComment) : undefined,
         };
 
-        return cleanComment;
+        return optimizedComment;
       };
 
       // Strip bloat from all activities (remove diff field which is large)
-      const strippedValues = response.data.values.map((activity) => {
+      const strippedValues = response.values.map((activity) => {
         // biome-ignore lint/correctness/noUnusedVariables: Removing diff field from API response
         const { diff, ...rest } = activity;
 
@@ -126,15 +121,15 @@ export const getPrActivitiesTool = (server: McpServer) => {
       });
 
       // Filter by activity types if specified
-      let responseData: ActivitiesResponse = {
-        ...response.data,
+      let responseData: OptimizedActivitiesResponse = {
+        ...response,
         values: strippedValues,
       };
 
       if (activityTypes && activityTypes.length > 0) {
         const filteredValues = strippedValues.filter((activity) => activityTypes.includes(activity.action));
         responseData = {
-          ...response.data,
+          ...response,
           values: filteredValues,
           size: filteredValues.length,
         };
