@@ -605,6 +605,32 @@ export interface RestPullRequestParticipant {
   lastReviewedCommit?: string;
 }
 
+/**
+ * Emoticon object from Bitbucket Server (RestEmoticon schema from Swagger).
+ * Represents an emoticon reaction that can be added to comments.
+ */
+export interface RestEmoticon {
+  /** Emoticon shortcut (e.g., "thumbsup") */
+  shortcut: string;
+  /** URL to the emoticon image/SVG */
+  url: string;
+  /** Emoticon value/identifier (optional) */
+  value?: string;
+}
+
+/**
+ * User reaction to a comment (RestUserReaction schema from Swagger).
+ * Returned when adding a reaction to a comment.
+ */
+export interface RestUserReaction {
+  /** The comment that was reacted to */
+  comment: RestComment;
+  /** The emoticon that was added */
+  emoticon: RestEmoticon;
+  /** The user who reacted */
+  user: RestUser;
+}
+
 // =============================================================================
 // Method Parameter Types - For BitbucketService Methods
 // =============================================================================
@@ -789,4 +815,36 @@ export interface UpdateReviewStatusParams {
   pullRequestId: number;
   /** The review status: APPROVED (approve), NEEDS_WORK (request changes), or UNAPPROVED (neutral/remove approval) */
   status: ParticipantStatus;
+}
+
+/**
+ * Parameters for addPullRequestCommentReaction method
+ */
+export interface AddPullRequestCommentReactionParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** The comment ID */
+  commentId: number;
+  /** The emoticon identifier (thumbsup, thumbsdown, heart, thinking_face, laugh) */
+  emoticon: string;
+}
+
+/**
+ * Parameters for removePullRequestCommentReaction method
+ */
+export interface RemovePullRequestCommentReactionParams {
+  /** The Bitbucket project key */
+  projectKey: string;
+  /** The repository slug */
+  repositorySlug: string;
+  /** The pull request ID */
+  pullRequestId: number;
+  /** The comment ID */
+  commentId: number;
+  /** The emoticon identifier to remove */
+  emoticon: string;
 }

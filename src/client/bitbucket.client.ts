@@ -2,6 +2,7 @@ import axios, { type AxiosInstance } from 'axios';
 import type {
   AddCommentBody,
   AddPullRequestCommentParams,
+  AddPullRequestCommentReactionParams,
   ChangesResponse,
   DeletePullRequestCommentParams,
   DiffResponse,
@@ -17,6 +18,7 @@ import type {
   ListProjectsParams,
   ListRepositoriesParams,
   PaginatedResponse,
+  RemovePullRequestCommentReactionParams,
   RepositoriesResponse,
   RestComment,
   RestProject,
@@ -24,6 +26,7 @@ import type {
   RestPullRequestActivityApiResponse,
   RestPullRequestParticipant,
   RestUser,
+  RestUserReaction,
   UpdateReviewStatusParams,
 } from './bitbucket.types.js';
 
@@ -217,5 +220,37 @@ export class BitbucketService {
       { status },
     );
     return response.data;
+  }
+
+  /**
+   * Add an emoticon reaction to a pull request comment
+   */
+  async addPullRequestCommentReaction(params: AddPullRequestCommentReactionParams): Promise<RestUserReaction> {
+    const { projectKey, repositorySlug, pullRequestId, commentId, emoticon } = params;
+
+    // Use comment-likes plugin API endpoint
+    const response = await this.client.put<RestUserReaction>(
+      `/comment-likes/latest/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/comments/${commentId}/reactions/${emoticon}`,
+      {},
+      {
+        baseURL: this.client.defaults.baseURL?.replace('/rest/api/latest', '/rest'),
+      },
+    );
+    return response.data;
+  }
+
+  /**
+   * Remove an emoticon reaction from a pull request comment
+   */
+  async removePullRequestCommentReaction(params: RemovePullRequestCommentReactionParams): Promise<void> {
+    const { projectKey, repositorySlug, pullRequestId, commentId, emoticon } = params;
+
+    // Use comment-likes plugin API endpoint
+    await this.client.delete(
+      `/comment-likes/latest/projects/${projectKey}/repos/${repositorySlug}/pull-requests/${pullRequestId}/comments/${commentId}/reactions/${emoticon}`,
+      {
+        baseURL: this.client.defaults.baseURL?.replace('/rest/api/latest', '/rest'),
+      },
+    );
   }
 }

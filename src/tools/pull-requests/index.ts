@@ -1,4 +1,5 @@
 export * from './add_pr_comment.js';
+export * from './add_pr_comment_reaction.js';
 export * from './add_pr_file_comment.js';
 export * from './add_pr_line_comment.js';
 export * from './delete_pr_comment.js';
@@ -8,4 +9,5 @@ export * from './get_pr_changes.js';
 export * from './get_pr_details.js';
 export * from './get_pr_diff.js';
 export * from './get_pr_file_diff.js';
+export * from './remove_pr_comment_reaction.js';
 export * from './update_review_status.js';

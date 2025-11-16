@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { listProjectsTool } from './projects/index.js';
 import {
+  addPrCommentReactionTool,
   addPrCommentTool,
   addPrFileCommentTool,
   addPrLineCommentTool,
@@ -11,6 +12,7 @@ import {
   getPrFileDiffTool,
   getPullRequestDetailsTool,
   getPullRequestDiffTool,
+  removePrCommentReactionTool,
   updateReviewStatusTool,
 } from './pull-requests/index.js';
 import { listRepositoriesTool } from './repositories/index.js';
@@ -31,6 +33,7 @@ export function registerTools(server: McpServer) {
   getInboxPullRequestsTool(server);
   getPullRequestDetailsTool(server);
   addPrCommentTool(server);
+  addPrCommentReactionTool(server);
   addPrFileCommentTool(server);
   addPrLineCommentTool(server);
   deletePrCommentTool(server);
@@ -38,5 +41,6 @@ export function registerTools(server: McpServer) {
   getPullRequestDiffTool(server);
   getPrFileDiffTool(server);
   getPrActivitiesTool(server);
+  removePrCommentReactionTool(server);
   updateReviewStatusTool(server);
 }

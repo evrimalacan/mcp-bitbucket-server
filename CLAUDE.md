@@ -8,7 +8,7 @@ This is an MCP (Model Context Protocol) server for Bitbucket Server/Data Center 
 - **User management**: Get user profile, list all users
 - **Project operations**: List projects with filtering
 - **Repository operations**: List repositories in a project
-- **Pull request operations**: Get PR details, get inbox PRs, get changed files, get full/file diffs (text and structured), add comments (three separate tools: general, file-level, and line-level), get activities, update review status (approve/request changes)
+- **Pull request operations**: Get PR details, get inbox PRs, get changed files, get full/file diffs (text and structured), add comments (three separate tools: general, file-level, and line-level), delete comments, add/remove emoticon reactions, get activities, update review status (approve/request changes)
 
 ## Architecture
 
@@ -559,6 +559,47 @@ export const getAllUsersTool = (server: McpServer) => {
 - Own comments: Any user can delete their own comments
 - Others' comments: Requires REPO_ADMIN permission
 - Comments with replies: Cannot be deleted (will return error)
+
+### bitbucket_add_pr_comment_reaction
+**File**: `src/tools/pull-requests/add_pr_comment_reaction.ts`
+**Endpoint**: `PUT /comment-likes/latest/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments/{commentId}/reactions/{emoticon}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `commentId` (required): The comment ID
+- `emoticon` (required): The emoticon identifier - one of: `thumbsup`, `thumbsdown`, `heart`, `thinking_face`, `laugh`
+
+**Returns**: RestUserReaction object with comment, emoticon details (shortcut, url), and user who reacted.
+
+**Purpose**: Add an emoticon reaction to a pull request comment. The operation is idempotent - adding the same reaction twice will succeed without error. Only predefined emoticons are supported to prevent invalid values.
+
+**Supported Emoticons**:
+- `thumbsup` - Thumbs up 👍
+- `thumbsdown` - Thumbs down 👎
+- `heart` - Heart ❤️
+- `thinking_face` - Thinking face 🤔
+- `laugh` - Laughing face 😄
+
+**Note**: Uses the Bitbucket Server comment-likes plugin API (`/rest/comment-likes/latest/`), not the core API.
+
+### bitbucket_remove_pr_comment_reaction
+**File**: `src/tools/pull-requests/remove_pr_comment_reaction.ts`
+**Endpoint**: `DELETE /comment-likes/latest/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments/{commentId}/reactions/{emoticon}`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `pullRequestId` (required): The pull request ID
+- `commentId` (required): The comment ID
+- `emoticon` (required): The emoticon identifier to remove - one of: `thumbsup`, `thumbsdown`, `heart`, `thinking_face`, `laugh`
+
+**Returns**: Simple success message (204 No Content).
+
+**Purpose**: Remove an emoticon reaction from a pull request comment. Only the user who added the reaction can remove it. If the reaction doesn't exist, the operation still succeeds (idempotent).
+
+**Supported Emoticons**: Same as `bitbucket_add_pr_comment_reaction`
+
+**Note**: Uses the Bitbucket Server comment-likes plugin API (`/rest/comment-likes/latest/`), not the core API.
 
 ## Pull Request Review Workflow
 
