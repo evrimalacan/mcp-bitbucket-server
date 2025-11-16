@@ -476,6 +476,53 @@ export interface DiffResponse {
 }
 
 /**
+ * Commit person object (author or committer) from Bitbucket Server API.
+ * Part of RestCommit schema from Swagger.
+ */
+export interface RestCommitPerson {
+  /** Person's full name */
+  name: string;
+  /** Person's email address */
+  emailAddress?: string;
+  /** Avatar URL (writeOnly in Swagger, included for completeness) */
+  avatarUrl?: string;
+}
+
+/**
+ * Minimal commit reference (RestMinimalCommit schema from Swagger).
+ * Used in parent commit references.
+ */
+export interface RestMinimalCommit {
+  /** Commit hash */
+  id: string;
+  /** Short commit hash (first 11 chars) */
+  displayId: string;
+}
+
+/**
+ * Complete commit object (RestCommit schema from Swagger).
+ * Used in RESCOPED activity's added/removed commits arrays.
+ */
+export interface RestCommit {
+  /** Commit hash */
+  id: string;
+  /** Short commit hash (first 11 chars) */
+  displayId: string;
+  /** Commit author information */
+  author: RestCommitPerson;
+  /** Timestamp when commit was authored */
+  authorTimestamp: number;
+  /** Commit committer information */
+  committer: RestCommitPerson;
+  /** Timestamp when commit was committed */
+  committerTimestamp: number;
+  /** Commit message */
+  message: string;
+  /** Parent commits */
+  parents: RestMinimalCommit[];
+}
+
+/**
  * Pull request activity (RestPullRequestActivity schema from Swagger).
  * Base activity structure without diff field (diff is in RestPullRequestActivityApiResponse).
  */
@@ -503,6 +550,14 @@ export interface RestPullRequestActivity {
   addedReviewers?: RestUser[];
   /** Removed reviewers (for reviewer change activities) */
   removedReviewers?: RestUser[];
+  /** Added commits (for RESCOPED activities) */
+  added?: {
+    commits?: RestCommit[];
+  };
+  /** Removed commits (for RESCOPED activities) */
+  removed?: {
+    commits?: RestCommit[];
+  };
 }
 
 /**
