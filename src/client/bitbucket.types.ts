@@ -350,6 +350,8 @@ export interface RestPullRequest {
     approved: boolean;
     status: string;
   }>;
+  /** Links */
+  links?: RestLinks;
 }
 
 /**
