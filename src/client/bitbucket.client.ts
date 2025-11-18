@@ -134,9 +134,21 @@ export class BitbucketService {
    * - 'json': Structured diff object (DiffResponse)
    */
   async getPullRequestDiff(params: GetPullRequestDiffParams): Promise<string | DiffResponse> {
-    const { projectKey, repositorySlug, pullRequestId, path, contextLines, whitespace, format = 'text' } = params;
+    const {
+      projectKey,
+      repositorySlug,
+      pullRequestId,
+      path,
+      sinceId,
+      untilId,
+      contextLines,
+      whitespace,
+      format = 'text',
+    } = params;
 
     const queryParams: Record<string, string | number> = {};
+    if (sinceId) queryParams.sinceId = sinceId;
+    if (untilId) queryParams.untilId = untilId;
     if (contextLines !== undefined) queryParams.contextLines = contextLines;
     if (whitespace) queryParams.whitespace = whitespace;
 

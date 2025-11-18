@@ -778,6 +778,10 @@ export interface GetPullRequestDiffParams {
   pullRequestId: number;
   /** Path to file (optional - empty for full PR diff) */
   path?: string;
+  /** The since commit hash to get diff from a specific commit */
+  sinceId?: string;
+  /** The until commit hash to get diff up to a specific commit */
+  untilId?: string;
   /** Number of context lines around changes (default: 10) */
   contextLines?: number;
   /** Whitespace handling: 'show' or 'ignore-all' */
