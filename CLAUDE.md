@@ -568,7 +568,7 @@ export const getAllUsersTool = (server: McpServer) => {
 - `repositorySlug` (required): The repository slug
 - `pullRequestId` (required): The pull request ID
 - `commentId` (required): The comment ID
-- `emoticon` (required): The emoticon identifier - one of: `thumbsup`, `thumbsdown`, `heart`, `thinking_face`, `laugh`
+- `emoticon` (required): The emoticon identifier - one of: `thumbsup`, `thumbsdown`, `heart`, `thinking_face`, `laughing`
 
 **Returns**: RestUserReaction object with comment, emoticon details (shortcut, url), and user who reacted.
 
@@ -579,7 +579,7 @@ export const getAllUsersTool = (server: McpServer) => {
 - `thumbsdown` - Thumbs down 👎
 - `heart` - Heart ❤️
 - `thinking_face` - Thinking face 🤔
-- `laugh` - Laughing face 😄
+- `laughing` - Laughing face 😄
 
 **Note**: Uses the Bitbucket Server comment-likes plugin API (`/rest/comment-likes/latest/`), not the core API.
 
@@ -591,7 +591,7 @@ export const getAllUsersTool = (server: McpServer) => {
 - `repositorySlug` (required): The repository slug
 - `pullRequestId` (required): The pull request ID
 - `commentId` (required): The comment ID
-- `emoticon` (required): The emoticon identifier to remove - one of: `thumbsup`, `thumbsdown`, `heart`, `thinking_face`, `laugh`
+- `emoticon` (required): The emoticon identifier to remove - one of: `thumbsup`, `thumbsdown`, `heart`, `thinking_face`, `laughing`
 
 **Returns**: Simple success message (204 No Content).
 

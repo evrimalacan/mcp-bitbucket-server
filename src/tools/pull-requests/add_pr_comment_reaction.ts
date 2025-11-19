@@ -8,8 +8,8 @@ const schema = z.object({
   pullRequestId: z.number().describe('The pull request ID'),
   commentId: z.number().describe('The comment ID'),
   emoticon: z
-    .enum(['thumbsup', 'thumbsdown', 'heart', 'thinking_face', 'laugh'])
-    .describe('The emoticon to add (thumbsup, thumbsdown, heart, thinking_face, laugh)'),
+    .enum(['thumbsup', 'thumbsdown', 'heart', 'thinking_face', 'laughing'])
+    .describe('The emoticon to add (thumbsup, thumbsdown, heart, thinking_face, laughing)'),
 });
 
 export const addPrCommentReactionTool = (server: McpServer) => {
@@ -18,7 +18,7 @@ export const addPrCommentReactionTool = (server: McpServer) => {
     {
       title: 'Add Emoticon Reaction to PR Comment',
       description:
-        'Add an emoticon reaction to a pull request comment. Supported emoticons: thumbsup, thumbsdown, heart, thinking_face, laugh. The operation is idempotent - adding the same reaction twice will succeed.',
+        'Add an emoticon reaction to a pull request comment. Supported emoticons: thumbsup, thumbsdown, heart, thinking_face, laughing. The operation is idempotent - adding the same reaction twice will succeed.',
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, commentId, emoticon }) => {

@@ -890,7 +890,7 @@ export interface AddPullRequestCommentReactionParams {
   pullRequestId: number;
   /** The comment ID */
   commentId: number;
-  /** The emoticon identifier (thumbsup, thumbsdown, heart, thinking_face, laugh) */
+  /** The emoticon identifier (thumbsup, thumbsdown, heart, thinking_face, laughing) */
   emoticon: string;
 }
 
