@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // ============ Library Exports ============
-// Re-export everything from client for library usage
-export * from './client/index.js';
+// Re-export the Bitbucket client library (use bitbucket-data-center-client directly for library usage)
+export * from 'bitbucket-data-center-client';
 
 // ============ MCP Server Setup ============
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';

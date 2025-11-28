@@ -8,21 +8,22 @@ This is an MCP (Model Context Protocol) server for Bitbucket Server/Data Center 
 - **User management**: Get user profile, list all users
 - **Project operations**: List projects with filtering
 - **Repository operations**: List repositories in a project
-- **Pull request operations**: Get PR details, get inbox PRs, get changed files, get full/file diffs (text and structured), add comments (three separate tools: general, file-level, and line-level), delete comments, add/remove emoticon reactions, get activities, update review status (approve/request changes)
+- **Pull request operations**: Create PR, get PR details, get inbox PRs, get changed files, get full/file diffs (text and structured), add comments (three separate tools: general, file-level, and line-level), delete comments, add/remove emoticon reactions, get activities, update review status (approve/request changes)
 
 ## Architecture
 
-This is a **simple, straightforward implementation** with minimal abstraction:
+This is a **simple, straightforward implementation** using the `bitbucket-data-center-client` library:
 
 ```
-Tool → bitbucketClient (axios) → Bitbucket Server REST API
+Tool → bitbucketService (BitbucketClient) → Bitbucket Server REST API
 ```
 
 **Key principles:**
-- Direct axios client usage (no wrapper classes)
+- Use the `bitbucket-data-center-client` library for all API calls
+- Type-safe client methods (no manual endpoint construction)
 - Minimal error handling (let errors bubble up)
 - Simple, readable code
-- Verify all endpoints against Swagger documentation
+- Verify endpoint capabilities against Swagger documentation when needed
 
 ## Bitbucket Server API Documentation
 
@@ -40,23 +41,15 @@ grep -n '"/api/latest/users"' BitbucketServerSwagger.json
 # Use the line number from grep, then read ~80 lines
 ```
 
-### API Base URL
-
-All endpoints use: `${BITBUCKET_URL}/rest/api/latest`
-
-Example: `https://your-bitbucket-server.com/rest/api/latest/users`
-
 ### Authentication
 
-Uses **Bearer token** authentication:
+The `bitbucket-data-center-client` library handles authentication automatically using Bearer tokens.
 
-```typescript
-headers: {
-  Authorization: `Bearer ${token}`
-}
-```
+Configuration is done via environment variables in `.env`:
+- `BITBUCKET_URL`: Your Bitbucket Server base URL
+- `BITBUCKET_TOKEN`: Personal Access Token from Bitbucket Server
 
-The token is a Bitbucket Personal Access Token configured in `.env`.
+The library automatically adds the `Authorization: Bearer ${token}` header to all requests.
 
 ## Project Structure
 
@@ -65,134 +58,71 @@ src/
 ├── config.ts                    # Environment validation (BITBUCKET_URL, BITBUCKET_TOKEN)
 ├── index.ts                     # Main entry point, MCP server setup
 ├── services/
-│   └── bitbucket.ts            # Axios client instance (export const bitbucketClient)
-├── types/
-│   ├── index.ts                # Barrel export for all types
-│   ├── common.ts               # Shared types (PaginatedResponse)
-│   ├── pull-request.ts         # Pull request types (RestComment, RestPullRequest, etc.)
-│   └── repository.ts           # Repository-specific types
+│   └── bitbucket.ts            # BitbucketClient singleton (export const bitbucketService)
 └── tools/
     ├── index.ts                # Tool registration
     ├── users/
     │   ├── index.ts            # Barrel export
-    │   ├── get_user_profile.ts # GET /users/{username}
-    │   └── get_all_users.ts    # GET /users
+    │   ├── get_user_profile.ts # User profile operations
+    │   └── get_all_users.ts    # List all users
     ├── projects/
     │   ├── index.ts            # Barrel export
-    │   └── list_projects.ts    # GET /projects
+    │   └── list_projects.ts    # List projects with filtering
     ├── repositories/
     │   ├── index.ts            # Barrel export
-    │   └── list_repositories.ts # GET /projects/{projectKey}/repos
+    │   └── list_repositories.ts # List repositories in a project
     └── pull-requests/
-        ├── index.ts                    # Barrel export
-        ├── get_inbox_pull_requests.ts  # GET /inbox/pull-requests
-        ├── add_pr_comment.ts           # POST /projects/.../pull-requests/.../comments
-        ├── get_pr_changes.ts           # GET /projects/.../pull-requests/.../changes
-        ├── get_pr_file_diff.ts         # GET /projects/.../pull-requests/.../diff/{path}
-        ├── get_pr_activities.ts        # GET /projects/.../pull-requests/.../activities
-        └── update_review_status.ts     # PUT /projects/.../pull-requests/.../participants/{userSlug}
+        ├── index.ts                       # Barrel export
+        ├── get_inbox_pull_requests.ts     # Get PRs in reviewer's inbox
+        ├── get_pr_details.ts              # Get full PR details
+        ├── get_pr_diff.ts                 # Get PR diff (text or JSON)
+        ├── add_pr_comment.ts              # Add general/reply comment
+        ├── add_pr_file_comment.ts         # Add file-level comment
+        ├── add_pr_line_comment.ts         # Add line-specific comment
+        ├── delete_pr_comment.ts           # Delete comment
+        ├── add_pr_comment_reaction.ts     # Add emoticon reaction
+        ├── remove_pr_comment_reaction.ts  # Remove emoticon reaction
+        ├── get_pr_changes.ts              # Get changed files list
+        ├── get_pr_file_diff.ts            # Get structured file diff
+        ├── get_pr_activities.ts           # Get PR activities/comments
+        └── update_review_status.ts        # Approve/request changes
 ```
 
 ## TypeScript Types
 
-TypeScript type definitions for Bitbucket Server API responses are located in `src/types/`:
+All TypeScript types are provided by the `bitbucket-data-center-client` library. You don't need to define or maintain types manually.
 
+The library exports comprehensive types for:
+- Users, projects, repositories
+- Pull requests, comments, activities
+- Diffs, changes, and review statuses
+- Paginated responses
+
+Simply import types from the library when needed:
+
+```typescript
+import type { RestPullRequest, RestComment } from 'bitbucket-data-center-client';
 ```
-src/types/
-├── index.ts         # Barrel export (import from here)
-├── common.ts        # Shared types (PaginatedResponse)
-├── pull-request.ts  # Pull request types (RestComment, RestPullRequest, RestPullRequestParticipant, etc.)
-└── repository.ts    # Repository-specific types
-```
-
-### Type Naming Conventions
-
-- **Match Swagger schema names exactly**: `RestRepository`, `RestProject`, `RestPullRequest`
-- **Use interfaces for objects**: `interface RestRepository { ... }`
-- **Use union types for enums**: `type RepositoryState = "AVAILABLE" | "OFFLINE"`
-- **Generic wrapper types**: `PaginatedResponse<T>` for paginated endpoints
-- **Response type aliases**: `RepositoriesResponse = PaginatedResponse<RestRepository>`
-
-### Adding New Types
-
-1. **Find the schema in Swagger**:
-   ```bash
-   grep -n '"RestTypeName"' BitbucketServerSwagger.json
-   ```
-
-2. **Create/update type file** (e.g., `src/types/domain.ts`):
-   ```typescript
-   // Focus on readonly properties (what API returns)
-   export interface RestTypeName {
-     id: number;
-     name: string;
-     // ... other fields
-   }
-
-   export type DomainResponse = PaginatedResponse<RestTypeName>;
-   ```
-
-3. **Export from barrel file** (`src/types/index.ts`):
-   ```typescript
-   export type { RestTypeName, DomainResponse } from "./domain.js";
-   ```
-
-4. **Use in tool**:
-   ```typescript
-   import type { DomainResponse } from "../../types/index.js";
-
-   const response = await bitbucketClient.get<DomainResponse>("/endpoint");
-   ```
-
-### Type Design Principles
-
-Following the project's simplicity philosophy:
-
-**✅ DO:**
-- Map types directly from Swagger schemas
-- Focus on readonly properties (API responses)
-- Keep types simple and minimal
-- Use generic `PaginatedResponse<T>` for all paginated endpoints
-
-**❌ DON'T:**
-- Over-engineer with complex utility types
-- Include writeOnly properties (used for requests)
-- Add properties that aren't useful
-- Create unnecessary type abstractions
 
 ## Tool Development Workflow
 
-### 1. Find the Endpoint in Swagger
+### 1. Check the Library Documentation
 
-```bash
-# Search for the endpoint
-grep -n '"/api/latest/your-endpoint"' BitbucketServerSwagger.json
+The `bitbucket-data-center-client` library provides all necessary methods. Check:
+- Library README: https://github.com/evrimalacan/bitbucket-data-center-client
+- Existing tools in `src/tools/` for examples
 
-# Read the specification
-# Note the line number, then read from that line
-```
+### 2. Implement the Tool
 
-### 2. Verify Parameters
-
-**Check what parameters are actually supported:**
-- Path parameters (required in the URL)
-- Query parameters (optional filters, pagination)
-- Request body (for POST/PUT)
-
-**Don't assume parameters exist** - the Swagger spec is the source of truth.
-
-### 3. Implement the Tool
-
-Follow this simple pattern:
+Follow this simple pattern using the client library:
 
 ```typescript
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { bitbucketClient } from "../../services/bitbucket.js";
-import type { YourResponseType } from "../../types/index.js";
+import { bitbucketService } from "../../services/bitbucket.js";
 
 const schema = z.object({
-  requiredParam: z.string().describe("Description from Swagger"),
+  requiredParam: z.string().describe("Description of parameter"),
   optionalParam: z.string().optional().describe("Optional parameter"),
 });
 
@@ -201,21 +131,21 @@ export const toolNameTool = (server: McpServer) => {
     "bitbucket_tool_name",
     {
       title: "Human Readable Title",
-      description: "Description from Swagger documentation",
+      description: "Clear description of what this tool does",
       inputSchema: schema.shape,
     },
-    async (params) => {
-      const { requiredParam, optionalParam } = schema.parse(params);
-
-      const response = await bitbucketClient.get<YourResponseType>("/endpoint", {
-        params: optionalParam ? { optionalParam } : {},
+    async ({ requiredParam, optionalParam }) => {
+      // Call the appropriate library method
+      const result = await bitbucketService.someMethod({
+        requiredParam,
+        optionalParam,
       });
 
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(response.data, null, 2),
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };
@@ -224,7 +154,7 @@ export const toolNameTool = (server: McpServer) => {
 };
 ```
 
-### 4. Register the Tool
+### 3. Register the Tool
 
 ```typescript
 // 1. Export from domain barrel file (e.g., src/tools/users/index.ts)
@@ -239,7 +169,7 @@ export function registerTools(server: McpServer) {
 }
 ```
 
-### 5. Run the Linter
+### 4. Run the Linter
 
 Always run the linter after implementing a new tool:
 
@@ -254,48 +184,51 @@ The linter will auto-fix formatting, catch unused variables, and ensure code qua
 ### Keep It Simple
 
 **✅ DO:**
-- Use direct axios calls: `bitbucketClient.get(...)`
-- Minimal error handling (only when necessary)
+- Use `bitbucketService` client methods: `bitbucketService.getUserProfile(...)`
+- Minimal error handling (let errors bubble up)
 - Short, focused functions
 - Clear parameter names
+- Destructure parameters directly in async handler
 
 **❌ DON'T:**
-- Add wrapper classes
+- Add wrapper functions around the library
 - Over-engineer error handling
 - Add unnecessary abstractions
-- Use try-catch unless required
+- Use try-catch unless absolutely required
 
 ### Example: Simple Tool
 
 ```typescript
-// ✅ Good - simple and direct
-export const getAllUsersTool = (server: McpServer) => {
-  server.registerTool("bitbucket_get_all_users", { ... }, async (params) => {
-    const { filter } = schema.parse(params);
+// ✅ Good - simple and direct using the library
+export const getUserProfileTool = (server: McpServer) => {
+  server.registerTool(
+    "bitbucket_get_user_profile",
+    {
+      title: "Get Bitbucket User Profile",
+      description: "Gets Bitbucket Server user profile details by username",
+      inputSchema: schema.shape,
+    },
+    async ({ username }) => {
+      const user = await bitbucketService.getUserProfile({ username });
 
-    const response = await bitbucketClient.get("/users", {
-      params: filter ? { filter } : {},
-    });
-
-    return {
-      content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }],
-    };
-  });
+      return {
+        content: [{ type: "text", text: JSON.stringify(user, null, 2) }],
+      };
+    }
+  );
 };
 ```
 
 ```typescript
 // ❌ Bad - over-engineered
-export const getAllUsersTool = (server: McpServer) => {
-  server.registerTool("bitbucket_get_all_users", { ... }, async (params) => {
+export const getUserProfileTool = (server: McpServer) => {
+  server.registerTool("bitbucket_get_user_profile", { ... }, async (params) => {
     try {
-      const { filter } = schema.parse(params);
+      const validated = validateParams(params); // Unnecessary - zod handles this
+      const client = getClient(); // Unnecessary - use bitbucketService directly
+      const response = await client.getUser(validated.username);
 
-      const queryParams = buildQueryParams({ filter }); // Unnecessary
-      const client = getClient(); // Unnecessary wrapper
-      const response = await client.get("/users", queryParams);
-
-      return handleResponse(response); // Over-abstracted
+      return formatResponse(response); // Over-abstracted
     } catch (error) {
       return handleError(error); // Let errors bubble
     }
@@ -363,6 +296,28 @@ export const getAllUsersTool = (server: McpServer) => {
 - Removes all metadata not needed for review
 
 **Purpose**: Discover all PRs across all projects and repositories that need your review in one call. Much more efficient than querying project by project. Use the `id`, `projectKey`, and `repositorySlug` from the response to review specific PRs with other tools.
+
+### bitbucket_create_pull_request
+**File**: `src/tools/pull-requests/create_pull_request.ts`
+**Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests`
+**Parameters**:
+- `projectKey` (required): The Bitbucket Server project key
+- `repositorySlug` (required): The repository slug
+- `fromBranch` (required): Source branch name (e.g., "feature-x")
+- `toBranch` (required): Target branch name (e.g., "main")
+- `title` (required): PR title
+- `description` (optional): PR description in markdown format
+- `reviewers` (optional): Array of reviewer usernames to add
+
+**Returns**: Created pull request object including `id`, `title`, `state`, `fromRef`, `toRef`, `author`, and web URL.
+
+**Purpose**: Create a new pull request from a source branch to a target branch. Accepts simple branch names - they are automatically converted to full refs (e.g., "main" → "refs/heads/main").
+
+**Error Cases**:
+- 400: Malformed request
+- 401: Insufficient permissions
+- 404: Repository or branches don't exist
+- 409: Branches are the same, PR already exists, or target repo is archived
 
 ### bitbucket_get_pull_request
 **File**: `src/tools/pull-requests/get_pr_details.ts`
@@ -709,42 +664,28 @@ See `.env.example` for template.
 
 ### Pagination
 
-Many endpoints support pagination:
+The `bitbucket-data-center-client` library handles pagination automatically. Just pass the pagination parameters:
 
 ```typescript
-const response = await bitbucketClient.get("/endpoint", {
-  params: {
-    start: 0,
-    limit: 25,
-  },
+const result = await bitbucketService.listProjects({
+  start: 0,
+  limit: 25,
 });
 ```
 
-Response includes:
+Paginated responses include:
 - `values`: Array of results
 - `size`: Number of results in this page
 - `limit`: Page size
 - `isLastPage`: Boolean
 - `nextPageStart`: Start value for next page
 
-### Error Responses
+### Error Handling
 
-Bitbucket Server returns errors in this format:
-
-```json
-{
-  "errors": [
-    {
-      "context": "field_name",
-      "message": "Error description",
-      "exceptionName": "ExceptionType"
-    }
-  ]
-}
-```
+The library throws errors with Bitbucket Server's error format. Let them bubble up - the MCP SDK will handle them appropriately.
 
 ## Resources
 
-- **Swagger Documentation**: `BitbucketServerSwagger.json` in project root
-- **Bitbucket Server REST API**: `${BITBUCKET_URL}/rest/api/latest/`
-- **OpenAPI Spec**: Available via Bitbucket Server UI (triple dot menu)
+- **Library Documentation**: https://github.com/evrimalacan/bitbucket-data-center-client
+- **Swagger Documentation**: `BitbucketServerSwagger.json` in project root (for reference)
+- **Bitbucket Server REST API Docs**: Available via Bitbucket Server UI (triple dot menu)

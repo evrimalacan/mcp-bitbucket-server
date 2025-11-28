@@ -5,6 +5,7 @@ import {
   addPrCommentTool,
   addPrFileCommentTool,
   addPrLineCommentTool,
+  createPullRequestTool,
   deletePrCommentTool,
   getInboxPullRequestsTool,
   getPrActivitiesTool,
@@ -30,6 +31,7 @@ export function registerTools(server: McpServer) {
   listRepositoriesTool(server);
 
   // Pull request tools
+  createPullRequestTool(server);
   getInboxPullRequestsTool(server);
   getPullRequestDetailsTool(server);
   addPrCommentTool(server);

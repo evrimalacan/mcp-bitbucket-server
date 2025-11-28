@@ -2,6 +2,7 @@ export * from './add_pr_comment.js';
 export * from './add_pr_comment_reaction.js';
 export * from './add_pr_file_comment.js';
 export * from './add_pr_line_comment.js';
+export * from './create_pull_request.js';
 export * from './delete_pr_comment.js';
 export * from './get_inbox_pull_requests.js';
 export * from './get_pr_activities.js';
