@@ -15,7 +15,7 @@ const schema = z.object({
 
 export const updateReviewStatusTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_update_review_status',
+    'update_review_status',
     {
       title: 'Update Pull Request Review Status',
       description:

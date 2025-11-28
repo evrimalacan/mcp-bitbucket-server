@@ -19,7 +19,7 @@ const schema = z.object({
 
 export const getPullRequestDiffTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_get_pull_request_diff',
+    'get_pull_request_diff',
     {
       title: 'Get Pull Request Diff',
       description:

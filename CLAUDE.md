@@ -128,7 +128,7 @@ const schema = z.object({
 
 export const toolNameTool = (server: McpServer) => {
   server.registerTool(
-    "bitbucket_tool_name",
+    "tool_name",
     {
       title: "Human Readable Title",
       description: "Clear description of what this tool does",
@@ -202,7 +202,7 @@ The linter will auto-fix formatting, catch unused variables, and ensure code qua
 // ✅ Good - simple and direct using the library
 export const getUserProfileTool = (server: McpServer) => {
   server.registerTool(
-    "bitbucket_get_user_profile",
+    "get_user_profile",
     {
       title: "Get Bitbucket User Profile",
       description: "Gets Bitbucket Server user profile details by username",
@@ -238,19 +238,19 @@ export const getUserProfileTool = (server: McpServer) => {
 
 ## Current Tools
 
-### bitbucket_get_user_profile
+### get_user_profile
 **File**: `src/tools/users/get_user_profile.ts`
 **Endpoint**: `GET /users/{username}`
 **Parameters**:
 - `username` (required): The username/slug of the Bitbucket Server user
 
-### bitbucket_get_all_users
+### get_all_users
 **File**: `src/tools/users/get_all_users.ts`
 **Endpoint**: `GET /users`
 **Parameters**:
 - `filter` (optional): Filter users by username, name or email (partial match)
 
-### bitbucket_list_projects
+### list_projects
 **File**: `src/tools/projects/list_projects.ts`
 **Endpoint**: `GET /projects`
 **Parameters**:
@@ -263,7 +263,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Purpose**: Discover available projects that the authenticated user has access to. Use the project key from this response to list repositories in specific projects.
 
-### bitbucket_list_repositories
+### list_repositories
 **File**: `src/tools/repositories/list_repositories.ts`
 **Endpoint**: `GET /projects/{projectKey}/repos`
 **Parameters**:
@@ -271,7 +271,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Note**: According to Swagger, this endpoint does NOT support `name` or `permission` query parameters. Only pagination (`start`, `limit`) is supported.
 
-### bitbucket_get_inbox_pull_requests
+### get_inbox_pull_requests
 **File**: `src/tools/pull-requests/get_inbox_pull_requests.ts`
 **Endpoint**: `GET /inbox/pull-requests`
 **Parameters**:
@@ -297,7 +297,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Purpose**: Discover all PRs across all projects and repositories that need your review in one call. Much more efficient than querying project by project. Use the `id`, `projectKey`, and `repositorySlug` from the response to review specific PRs with other tools.
 
-### bitbucket_create_pull_request
+### create_pull_request
 **File**: `src/tools/pull-requests/create_pull_request.ts`
 **Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests`
 **Parameters**:
@@ -319,7 +319,7 @@ export const getUserProfileTool = (server: McpServer) => {
 - 404: Repository or branches don't exist
 - 409: Branches are the same, PR already exists, or target repo is archived
 
-### bitbucket_get_pull_request
+### get_pull_request
 **File**: `src/tools/pull-requests/get_pr_details.ts`
 **Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}`
 **Parameters**:
@@ -339,7 +339,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Purpose**: Get comprehensive metadata for a pull request. Use this when you need full PR details including source/destination branches, author information, and reviewers. Essential for tools that need to understand PR context before performing operations.
 
-### bitbucket_get_pull_request_diff
+### get_pull_request_diff
 **File**: `src/tools/pull-requests/get_pr_diff.ts`
 **Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/diff/{path}`
 **Parameters**:
@@ -359,7 +359,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Purpose**: Get the complete diff for a PR in one call (when `path` is omitted) or for a specific file. The format parameter controls the response type based on the Accept header. Use `format='text'` (default) for raw text suitable for parsing or display - the background-greg service uses this for generating PR review contexts. Use `format='json'` when you need structured data with exact line numbers and segments.
 
-### bitbucket_add_pr_comment
+### add_pr_comment
 **File**: `src/tools/pull-requests/add_pr_comment.ts`
 **Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
 **Parameters**:
@@ -373,7 +373,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Returns**: Simple success message with comment ID.
 
-### bitbucket_add_pr_file_comment
+### add_pr_file_comment
 **File**: `src/tools/pull-requests/add_pr_file_comment.ts`
 **Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
 **Parameters**:
@@ -383,11 +383,11 @@ export const getUserProfileTool = (server: McpServer) => {
 - `text` (required): The comment text
 - `path` (required): File path to attach the comment to (e.g., "src/main.ts")
 
-**Purpose**: Add a comment attached to a specific file in the PR (file-level comment, not line-specific). The comment will appear at the file level in the PR diff view. For replies to existing comments, use bitbucket_add_pr_comment with parentId.
+**Purpose**: Add a comment attached to a specific file in the PR (file-level comment, not line-specific). The comment will appear at the file level in the PR diff view. For replies to existing comments, use add_pr_comment with parentId.
 
 **Returns**: Simple success message with comment ID.
 
-### bitbucket_add_pr_line_comment
+### add_pr_line_comment
 **File**: `src/tools/pull-requests/add_pr_line_comment.ts`
 **Endpoint**: `POST /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments`
 **Parameters**:
@@ -400,11 +400,11 @@ export const getUserProfileTool = (server: McpServer) => {
 - `lineType` (required): Type of line - "ADDED" (green +), "REMOVED" (red -), or "CONTEXT" (unchanged)
 - `fileType` (required): Side of diff - "FROM" (source/old) or "TO" (destination/new)
 
-**Purpose**: Add an inline comment to a specific line in the PR diff. Use line numbers from `bitbucket_get_pull_request_file_diff` (destination line for TO side, source line for FROM side). Match the `lineType` to the segment type from the diff. For replies to existing comments, use bitbucket_add_pr_comment with parentId.
+**Purpose**: Add an inline comment to a specific line in the PR diff. Use line numbers from `get_pull_request_file_diff` (destination line for TO side, source line for FROM side). Match the `lineType` to the segment type from the diff. For replies to existing comments, use add_pr_comment with parentId.
 
 **Returns**: Simple success message with comment ID.
 
-### bitbucket_get_pull_request_changes
+### get_pull_request_changes
 **File**: `src/tools/pull-requests/get_pr_changes.ts`
 **Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/changes`
 **Parameters**:
@@ -417,7 +417,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Purpose**: Get an overview of all files changed in a PR. Use this as the first step before fetching detailed diffs. Always returns all changes with comment counts included.
 
-### bitbucket_get_pull_request_file_diff
+### get_pull_request_file_diff
 **File**: `src/tools/pull-requests/get_pr_file_diff.ts`
 **Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/diff/{path}`
 **Parameters**:
@@ -429,9 +429,9 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Returns**: Structured JSON with hunks, segments, and exact line numbers for each change. Each line includes `source` (FROM line number) and `destination` (TO line number) fields. Existing comments are embedded in the diff. Whitespace changes are always included.
 
-**Purpose**: Get line-by-line diff data for commenting on specific lines. Use the line numbers from this response when calling `bitbucket_add_pr_comment`.
+**Purpose**: Get line-by-line diff data for commenting on specific lines. Use the line numbers from this response when calling `add_pr_comment`.
 
-### bitbucket_get_pull_request_activities
+### get_pull_request_activities
 **File**: `src/tools/pull-requests/get_pr_activities.ts`
 **Endpoint**: `GET /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/activities`
 **Parameters**:
@@ -466,14 +466,14 @@ export const getUserProfileTool = (server: McpServer) => {
 - Get all activity: Omit `activityTypes` parameter
 
 **Token Optimization**: Response is automatically optimized to reduce token usage by ~50%:
-- Removes `diff` field (use `commentAnchor.path` with `bitbucket_get_pull_request_file_diff` to fetch code context on demand)
+- Removes `diff` field (use `commentAnchor.path` with `get_pull_request_file_diff` to fetch code context on demand)
 - Removes `user.links` from all user objects
 - Removes `comment.permittedOperations`
 - Simplifies `reactions` and `likedBy` to counts only
 
 **Purpose**: Get an overview of PR activity. Can filter to specific types (e.g., only comments) to reduce response size. Each comment activity includes full comment text, author, and creation date. For inline comments, use `commentAnchor` (path, line, lineType, fileType) to fetch the relevant diff separately.
 
-### bitbucket_update_review_status
+### update_review_status
 **File**: `src/tools/pull-requests/update_review_status.ts`
 **Endpoint**: `PUT /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/participants/{userSlug}`
 **Parameters**:
@@ -496,7 +496,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Note**: The tool makes a lightweight request to `/application-properties` to extract the authenticated username from the `X-AUSERNAME` response header, eliminating the need for users to provide their own slug.
 
-### bitbucket_delete_pr_comment
+### delete_pr_comment
 **File**: `src/tools/pull-requests/delete_pr_comment.ts`
 **Endpoint**: `DELETE /projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments/{commentId}`
 **Parameters**:
@@ -515,7 +515,7 @@ export const getUserProfileTool = (server: McpServer) => {
 - Others' comments: Requires REPO_ADMIN permission
 - Comments with replies: Cannot be deleted (will return error)
 
-### bitbucket_add_pr_comment_reaction
+### add_pr_comment_reaction
 **File**: `src/tools/pull-requests/add_pr_comment_reaction.ts`
 **Endpoint**: `PUT /comment-likes/latest/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments/{commentId}/reactions/{emoticon}`
 **Parameters**:
@@ -538,7 +538,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Note**: Uses the Bitbucket Server comment-likes plugin API (`/rest/comment-likes/latest/`), not the core API.
 
-### bitbucket_remove_pr_comment_reaction
+### remove_pr_comment_reaction
 **File**: `src/tools/pull-requests/remove_pr_comment_reaction.ts`
 **Endpoint**: `DELETE /comment-likes/latest/projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/comments/{commentId}/reactions/{emoticon}`
 **Parameters**:
@@ -552,7 +552,7 @@ export const getUserProfileTool = (server: McpServer) => {
 
 **Purpose**: Remove an emoticon reaction from a pull request comment. Only the user who added the reaction can remove it. If the reaction doesn't exist, the operation still succeeds (idempotent).
 
-**Supported Emoticons**: Same as `bitbucket_add_pr_comment_reaction`
+**Supported Emoticons**: Same as `add_pr_comment_reaction`
 
 **Note**: Uses the Bitbucket Server comment-likes plugin API (`/rest/comment-likes/latest/`), not the core API.
 
@@ -562,7 +562,7 @@ For agents reviewing PRs and leaving comments on specific lines:
 
 0. **Discover PRs to review**:
    ```
-   bitbucket_get_inbox_pull_requests()
+   get_inbox_pull_requests()
    → Returns PRs across all projects: [{id, title, description, state, author, projectKey, repositorySlug, ...}, ...]
    ```
    Use `id`, `projectKey`, and `repositorySlug` from each PR for the following steps.
@@ -570,10 +570,10 @@ For agents reviewing PRs and leaving comments on specific lines:
 1. **[Optional] Get activity overview or comments**:
    ```
    # Get all activity
-   bitbucket_get_pull_request_activities(projectKey, repositorySlug, pullRequestId)
+   get_pull_request_activities(projectKey, repositorySlug, pullRequestId)
 
    # Or get only comments (smaller response)
-   bitbucket_get_pull_request_activities(projectKey, repositorySlug, pullRequestId,
+   get_pull_request_activities(projectKey, repositorySlug, pullRequestId,
      activityTypes=["COMMENTED", "REVIEW_COMMENTED"])
    → Returns filtered activities: [{action: "COMMENTED", comment: {text, author, ...}, ...}, ...]
    ```
@@ -581,19 +581,19 @@ For agents reviewing PRs and leaving comments on specific lines:
 
 2. **Get all changed files**:
    ```
-   bitbucket_get_pull_request_changes(projectKey, repositorySlug, pullRequestId)
+   get_pull_request_changes(projectKey, repositorySlug, pullRequestId)
    → Returns list of files: [{path, type: "MODIFY", ...}, ...]
    ```
 
 3. **For each file of interest, get structured diff**:
    ```
-   bitbucket_get_pull_request_file_diff(projectKey, repositorySlug, pullRequestId, path="src/main.ts")
+   get_pull_request_file_diff(projectKey, repositorySlug, pullRequestId, path="src/main.ts")
    → Returns: {hunks: [{segments: [{type: "ADDED", lines: [{source: 42, destination: 43, line: "code"}]}]}]}
    ```
 
 4. **Comment on specific lines**:
    ```
-   bitbucket_add_pr_line_comment(
+   add_pr_line_comment(
      projectKey, repositorySlug, pullRequestId,
      text="Consider using const here",
      path="src/main.ts",
@@ -606,13 +606,13 @@ For agents reviewing PRs and leaving comments on specific lines:
 5. **Update review status**:
    ```
    # Approve the PR
-   bitbucket_update_review_status(
+   update_review_status(
      projectKey, repositorySlug, pullRequestId,
      status="APPROVED"
    )
 
    # Or request changes
-   bitbucket_update_review_status(
+   update_review_status(
      projectKey, repositorySlug, pullRequestId,
      status="NEEDS_WORK"
    )

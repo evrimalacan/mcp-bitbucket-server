@@ -14,7 +14,7 @@ const schema = z.object({
 
 export const addPrCommentReactionTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_add_pr_comment_reaction',
+    'add_pr_comment_reaction',
     {
       title: 'Add Emoticon Reaction to PR Comment',
       description:

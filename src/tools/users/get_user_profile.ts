@@ -8,7 +8,7 @@ const schema = z.object({
 
 export const getUserProfileTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_get_user_profile',
+    'get_user_profile',
     {
       title: 'Get Bitbucket User Profile',
       description: 'Gets Bitbucket Server user profile details by username',

@@ -12,7 +12,7 @@ const schema = z.object({
 
 export const deletePrCommentTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_delete_pr_comment',
+    'delete_pr_comment',
     {
       title: 'Delete Pull Request Comment',
       description:

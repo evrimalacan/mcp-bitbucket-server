@@ -8,7 +8,7 @@ const schema = z.object({
 
 export const listRepositoriesTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_list_repositories',
+    'list_repositories',
     {
       title: 'List Bitbucket Repositories',
       description: 'List all repositories in a Bitbucket Server project',

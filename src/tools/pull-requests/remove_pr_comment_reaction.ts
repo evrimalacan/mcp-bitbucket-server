@@ -14,7 +14,7 @@ const schema = z.object({
 
 export const removePrCommentReactionTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_remove_pr_comment_reaction',
+    'remove_pr_comment_reaction',
     {
       title: 'Remove Emoticon Reaction from PR Comment',
       description:

@@ -12,11 +12,11 @@ const schema = z.object({
 
 export const addPrCommentTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_add_pr_comment',
+    'add_pr_comment',
     {
       title: 'Add General Pull Request Comment',
       description:
-        'Add a general comment to a pull request (not attached to any specific file or line). Use parentId to reply to an existing comment. For file or line-specific comments, use bitbucket_add_pr_file_comment or bitbucket_add_pr_line_comment instead.',
+        'Add a general comment to a pull request (not attached to any specific file or line). Use parentId to reply to an existing comment. For file or line-specific comments, use add_pr_file_comment or add_pr_line_comment instead.',
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, text, parentId }) => {

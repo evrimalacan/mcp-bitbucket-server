@@ -11,11 +11,11 @@ const schema = z.object({
 
 export const getPrChangesTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_get_pull_request_changes',
+    'get_pull_request_changes',
     {
       title: 'Get Pull Request Changes',
       description:
-        'Gets a list of all changed files in a pull request with file-level metadata (file paths, change types like ADD/MODIFY/DELETE, content IDs). This is useful for getting an overview of what files changed. For line-by-line diff data, use bitbucket_get_pull_request_file_diff.',
+        'Gets a list of all changed files in a pull request with file-level metadata (file paths, change types like ADD/MODIFY/DELETE, content IDs). This is useful for getting an overview of what files changed. For line-by-line diff data, use get_pull_request_file_diff.',
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, limit }) => {

@@ -10,7 +10,7 @@ const schema = z.object({
 
 export const getInboxPullRequestsTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_get_inbox_pull_requests',
+    'get_inbox_pull_requests',
     {
       title: 'Get Inbox Pull Requests',
       description:

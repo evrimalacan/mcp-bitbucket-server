@@ -45,7 +45,7 @@ const schema = z.object({
 
 export const getPrActivitiesTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_get_pull_request_activities',
+    'get_pull_request_activities',
     {
       title: 'Get Pull Request Activities',
       description:

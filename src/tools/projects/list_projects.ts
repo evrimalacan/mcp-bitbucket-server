@@ -11,7 +11,7 @@ const schema = z.object({
 
 export const listProjectsTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_list_projects',
+    'list_projects',
     {
       title: 'List Projects',
       description:

@@ -12,11 +12,11 @@ const schema = z.object({
 
 export const addPrFileCommentTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_add_pr_file_comment',
+    'add_pr_file_comment',
     {
       title: 'Add File-Level Pull Request Comment',
       description:
-        'Add a comment attached to a specific file in a pull request (not to a specific line). The comment will appear at the file level in the PR diff view. To reply to an existing comment (including file/line comments), use bitbucket_add_pr_comment instead.',
+        'Add a comment attached to a specific file in a pull request (not to a specific line). The comment will appear at the file level in the PR diff view. To reply to an existing comment (including file/line comments), use add_pr_comment instead.',
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, text, path }) => {

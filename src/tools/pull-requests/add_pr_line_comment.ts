@@ -17,11 +17,11 @@ const schema = z.object({
 
 export const addPrLineCommentTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_add_pr_line_comment',
+    'add_pr_line_comment',
     {
       title: 'Add Line-Level Pull Request Comment',
       description:
-        'Add an inline comment to a specific line in a pull request. Use the line numbers from bitbucket_get_pull_request_file_diff (destination line for TO side, source line for FROM side). Match the lineType to the segment type from the diff (ADDED/REMOVED/CONTEXT). To reply to an existing comment (including file/line comments), use bitbucket_add_pr_comment instead.',
+        'Add an inline comment to a specific line in a pull request. Use the line numbers from get_pull_request_file_diff (destination line for TO side, source line for FROM side). Match the lineType to the segment type from the diff (ADDED/REMOVED/CONTEXT). To reply to an existing comment (including file/line comments), use add_pr_comment instead.',
       inputSchema: schema.shape,
     },
     async ({ projectKey, repositorySlug, pullRequestId, text, path, line, lineType, fileType }) => {

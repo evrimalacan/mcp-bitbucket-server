@@ -14,7 +14,7 @@ const schema = z.object({
 
 export const createPullRequestTool = (server: McpServer) => {
   server.registerTool(
-    'bitbucket_create_pull_request',
+    'create_pull_request',
     {
       title: 'Create Pull Request',
       description:
