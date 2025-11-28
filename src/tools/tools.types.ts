@@ -4,7 +4,7 @@
  * They are NOT part of the library interface (src/client/).
  */
 
-import type { ActivityAction, PaginatedResponse, PullRequestState, RestUser } from '../client/bitbucket.types.js';
+import type { ActivityAction, PaginatedResponse, PullRequestState, RestUser } from 'bitbucket-data-center-client';
 
 // =============================================================================
 // Pull Request Optimization Types

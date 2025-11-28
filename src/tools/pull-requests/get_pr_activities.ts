@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { RestComment, RestUser, RestUserApiResponse } from 'bitbucket-data-center-client';
 import { z } from 'zod';
-import type { RestComment, RestUser, RestUserApiResponse } from '../../client/bitbucket.types.js';
 import { bitbucketService } from '../../services/bitbucket.js';
 import type {
   OptimizedActivitiesResponse,
